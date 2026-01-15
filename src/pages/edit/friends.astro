@@ -1,0 +1,328 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopNav from "../../components/TopNav.astro";
+import Footer from "../../components/Footer.astro";
+
+const sessionCookie = Astro.cookies.get("ms_session");
+let user = null;
+
+if (sessionCookie) {
+    try {
+        user = JSON.parse(sessionCookie.value);
+    } catch {
+        // Invalid cookie
+    }
+}
+
+if (!user) {
+    return Astro.redirect("/login");
+}
+---
+
+<Layout title="Edit Top Friends">
+    <TopNav user={user} />
+
+    <div class="ms-container">
+        <div class="ms-profile">
+            <div class="ms-profile-left">
+                <div class="ms-box">
+                    <div class="ms-box-header">Edit Options</div>
+                    <div class="ms-actions">
+                        <a href="/edit" class="ms-action-btn">Profile Info</a>
+                        <a href="/edit/interests" class="ms-action-btn"
+                            >Interests & Personality</a
+                        >
+                        <a
+                            href="/edit/friends"
+                            class="ms-action-btn ms-action-btn-primary"
+                            >Manage Top Friends</a
+                        >
+                        <a href="/edit/photos" class="ms-action-btn">Photos</a>
+                        <a href="/edit/css" class="ms-action-btn"
+                            >Customize CSS</a
+                        >
+                        <a href="/edit/song" class="ms-action-btn"
+                            >Profile Song</a
+                        >
+                    </div>
+                </div>
+
+                <div class="ms-box">
+                    <div class="ms-box-header ms-box-header-blue">
+                        Top 8 Tips
+                    </div>
+                    <div class="ms-box-content">
+                        <ul
+                            style="font-size: 10px; line-height: 1.6; margin-left: 15px; color: #666;"
+                        >
+                            <li>Drag friends to reorder</li>
+                            <li>First friend shows biggest</li>
+                            <li>Max 8 friends in Top Friends</li>
+                            <li>Click X to remove a friend</li>
+                            <li style="color: #ff6600;">
+                                Tom is everyone's first friend!
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ms-profile-right">
+                <div class="ms-box">
+                    <div class="ms-box-header">Edit Top 8 Friends</div>
+                    <div class="ms-box-content">
+                        <p
+                            class="ms-text-small ms-text-gray"
+                            style="margin-bottom: 15px;"
+                        >
+                            Your Top Friends appear on your profile. Arrange
+                            them in order of importance!
+                        </p>
+
+                        <div class="ms-section-header">Current Top Friends</div>
+                        <div
+                            id="top-friends-grid"
+                            class="ms-top-friends"
+                            style="margin-bottom: 20px; min-height: 100px; background: #f5f5f5; padding: 10px;"
+                        >
+                            <p
+                                class="ms-text-gray ms-text-small"
+                                style="grid-column: 1 / -1;"
+                            >
+                                Loading...
+                            </p>
+                        </div>
+
+                        <div class="ms-section-header">Add Friend to Top 8</div>
+                        <div
+                            style="display: flex; gap: 10px; margin-bottom: 15px;"
+                        >
+                            <input
+                                type="text"
+                                id="friend-handle"
+                                class="ms-form-input"
+                                placeholder="Enter handle (e.g., alice.bsky.social)"
+                                style="flex: 1;"
+                            />
+                            <button id="add-friend-btn" class="ms-form-submit"
+                                >Add Friend</button
+                            >
+                        </div>
+
+                        <div class="ms-section-header">
+                            Search Your Followers
+                        </div>
+                        <div
+                            id="followers-list"
+                            style="max-height: 300px; overflow-y: auto;"
+                        >
+                            <p class="ms-text-gray ms-text-small">
+                                Loading followers...
+                            </p>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <button id="save-btn" class="ms-form-submit"
+                                >Save Top Friends</button
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <Footer />
+</Layout>
+
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../lib/auth";
+    import {
+        getTopFriends,
+        saveTopFriends,
+        getProfiles,
+        TOM_DID,
+    } from "../../lib/atproto";
+
+    let currentTopFriends: string[] = [];
+    let agent: Agent;
+
+    async function init() {
+        const session = await getSession();
+        if (!session) {
+            window.location.href = "/login";
+            return;
+        }
+
+        agent = new Agent(session);
+
+        // Load current top friends
+        currentTopFriends = await getTopFriends(agent, session.did);
+        await renderTopFriends();
+        await loadFollowers();
+    }
+
+    async function renderTopFriends() {
+        const grid = document.getElementById("top-friends-grid")!;
+
+        if (currentTopFriends.length === 0) {
+            grid.innerHTML =
+                '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1;">No Top Friends yet. Add some below!</p>';
+            return;
+        }
+
+        const profiles = await getProfiles(agent, currentTopFriends);
+
+        grid.innerHTML = profiles
+            .map(
+                (friend, index) => `
+      <div class="ms-friend-card" data-did="${friend.did}" style="position: relative;">
+        <button
+          class="remove-friend"
+          data-did="${friend.did}"
+          style="position: absolute; top: -5px; right: -5px; background: #c00; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 1;"
+        >✕</button>
+        <img src="${friend.avatar || "/default-avatar.svg"}" alt="${friend.displayName || friend.handle}" class="ms-friend-pic" ${friend.did === TOM_DID ? 'style="border-color: #ff6600;"' : ""} />
+        <span class="ms-friend-name">${friend.displayName || friend.handle}</span>
+        <span class="ms-text-small ms-text-gray">#${index + 1}${friend.did === TOM_DID ? " ⭐" : ""}</span>
+      </div>
+    `,
+            )
+            .join("");
+
+        // Add remove handlers
+        document.querySelectorAll(".remove-friend").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                const did = (e.target as HTMLElement).dataset.did;
+                if (did) {
+                    currentTopFriends = currentTopFriends.filter(
+                        (d) => d !== did,
+                    );
+                    renderTopFriends();
+                }
+            });
+        });
+    }
+
+    async function loadFollowers() {
+        try {
+            const response = await agent.getFollowers({
+                actor: agent.session!.did,
+                limit: 50,
+            });
+            const followers = response.data.followers;
+
+            const followersList = document.getElementById("followers-list")!;
+
+            if (followers.length === 0) {
+                followersList.innerHTML =
+                    '<p class="ms-text-gray ms-text-small">No followers yet.</p>';
+                return;
+            }
+
+            followersList.innerHTML = followers
+                .map(
+                    (follower) => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px dotted #ccc;">
+          <img src="${follower.avatar || "/default-avatar.svg"}" alt="${follower.displayName || follower.handle}" style="width: 40px; height: 40px; object-fit: cover; border: 1px solid #ccc;" />
+          <div style="flex: 1;">
+            <strong style="font-size: 11px;">${follower.displayName || follower.handle}</strong>
+            <br />
+            <span class="ms-text-small ms-text-gray">@${follower.handle}</span>
+          </div>
+          <button
+            class="ms-action-btn add-from-list"
+            data-did="${follower.did}"
+            ${currentTopFriends.includes(follower.did) ? 'disabled style="opacity: 0.5;"' : ""}
+          >
+            ${currentTopFriends.includes(follower.did) ? "Added" : "Add"}
+          </button>
+        </div>
+      `,
+                )
+                .join("");
+
+            // Add click handlers
+            document.querySelectorAll(".add-from-list").forEach((btn) => {
+                btn.addEventListener("click", async (e) => {
+                    const did = (e.target as HTMLElement).dataset.did;
+                    if (did && !currentTopFriends.includes(did)) {
+                        if (currentTopFriends.length >= 8) {
+                            alert(
+                                "You can only have 8 Top Friends! Remove one first.",
+                            );
+                            return;
+                        }
+                        currentTopFriends.push(did);
+                        (e.target as HTMLButtonElement).disabled = true;
+                        (e.target as HTMLButtonElement).textContent = "Added";
+                        (e.target as HTMLElement).style.opacity = "0.5";
+                        await renderTopFriends();
+                    }
+                });
+            });
+        } catch (e) {
+            console.error("Failed to load followers:", e);
+            document.getElementById("followers-list")!.innerHTML =
+                '<p class="ms-text-gray ms-text-small">Failed to load followers.</p>';
+        }
+    }
+
+    // Add friend by handle
+    document
+        .getElementById("add-friend-btn")!
+        .addEventListener("click", async () => {
+            const input = document.getElementById(
+                "friend-handle",
+            ) as HTMLInputElement;
+            const handle = input.value.trim();
+
+            if (!handle) return;
+
+            if (currentTopFriends.length >= 8) {
+                alert("You can only have 8 Top Friends! Remove one first.");
+                return;
+            }
+
+            try {
+                const resolved = await agent.resolveHandle({ handle });
+                const did = resolved.data.did;
+
+                if (currentTopFriends.includes(did)) {
+                    alert("This person is already in your Top Friends!");
+                    return;
+                }
+
+                currentTopFriends.push(did);
+                input.value = "";
+                await renderTopFriends();
+            } catch (e) {
+                alert("Could not find that user. Please check the handle.");
+            }
+        });
+
+    // Save button
+    document.getElementById("save-btn")!.addEventListener("click", async () => {
+        const btn = document.getElementById("save-btn") as HTMLButtonElement;
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+
+        try {
+            await saveTopFriends(agent, currentTopFriends);
+            alert("Top Friends saved successfully!");
+            btn.textContent = "Saved!";
+        } catch (e) {
+            console.error("Failed to save:", e);
+            alert("Failed to save Top Friends. Please try again.");
+            btn.textContent = "Save Top Friends";
+        } finally {
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = "Save Top Friends";
+            }, 2000);
+        }
+    });
+
+    init();
+</script>

@@ -1,0 +1,69 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Safety">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">MySky Safety Center</div>
+      <div class="ms-box-content">
+        <h2 style="color: var(--ms-navy); margin-bottom: 15px;">Your Safety Matters</h2>
+
+        <div class="ms-section-header">Protecting Your Account</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          MySky uses AT Protocol OAuth for authentication - we never see or store your password.
+          Your credentials are handled securely by your PDS (Personal Data Server). Always ensure
+          you're logging in through the official OAuth flow.
+        </p>
+
+        <div class="ms-section-header">Reporting Abuse</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          If you encounter harassment, spam, or inappropriate content, please report it immediately.
+          You can use the AT Protocol's built-in moderation tools or contact us directly through
+          our <a href="/contact">Contact page</a>.
+        </p>
+
+        <div class="ms-section-header">Custom CSS Safety</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          MySky allows custom CSS on profiles. For your protection, we apply strict Content Security
+          Policy (CSP) rules to custom styles, preventing any script execution. This means custom
+          CSS can only affect visual styling - nothing else.
+        </p>
+
+        <div class="ms-section-header">Data Ownership</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          Your content is stored on your AT Protocol PDS, not our servers. This gives you full
+          control over your data. You can export, delete, or migrate your content at any time
+          through your PDS provider.
+        </p>
+
+        <div class="ms-section-header">Tips for Staying Safe Online</div>
+        <ul style="font-size: 12px; margin: 10px 0; padding-left: 20px;">
+          <li>Never share your PDS password with anyone</li>
+          <li>Be cautious about clicking links from unknown users</li>
+          <li>Review your Top Friends list regularly</li>
+          <li>Report suspicious accounts or content</li>
+          <li>Keep your PDS provider information secure</li>
+        </ul>
+
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+          <p style="font-size: 12px; margin: 0; color: #856404;">
+            <strong>Emergency?</strong> If you're in immediate danger, please contact your local
+            emergency services. Online safety resources are available at
+            <a href="https://www.staysafeonline.org" target="_blank" style="color: #856404;">StaySafeOnline.org</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>

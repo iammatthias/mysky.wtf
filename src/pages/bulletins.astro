@@ -1,0 +1,450 @@
+---
+import Layout from "../layouts/Layout.astro";
+import TopNav from "../components/TopNav.astro";
+import Footer from "../components/Footer.astro";
+
+const sessionCookie = Astro.cookies.get("ms_session");
+let user = null;
+if (sessionCookie) {
+    try {
+        user = JSON.parse(sessionCookie.value);
+    } catch {}
+}
+
+if (!user) {
+    return Astro.redirect("/login?redirect=/bulletins");
+}
+---
+
+<Layout title="Bulletins">
+    <TopNav user={user} />
+    <div class="ms-container">
+        <div class="ms-profile">
+            <div class="ms-profile-left">
+                <div class="ms-box">
+                    <div class="ms-box-header">Bulletin Board</div>
+                    <div class="ms-actions">
+                        <button
+                            class="ms-action-btn ms-action-btn-primary"
+                            id="post-bulletin-btn">Post Bulletin</button
+                        >
+                        <a href="/" class="ms-action-btn">Back to Home</a>
+                    </div>
+                </div>
+
+                <div class="ms-box">
+                    <div class="ms-box-header ms-box-header-blue">My Stats</div>
+                    <div class="ms-box-content">
+                        <table class="ms-contact-table">
+                            <tr>
+                                <td>Posted:</td>
+                                <td id="posted-count">0</td>
+                            </tr>
+                            <tr>
+                                <td>Friends:</td>
+                                <td id="friends-count">0</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="ms-ad">
+                    <div class="ms-ad-label">ADVERTISEMENT</div>
+                    <p>Get MORE friends!</p>
+                    <p class="ms-text-small">Browse profiles now</p>
+                </div>
+            </div>
+
+            <div class="ms-profile-right">
+                <div class="ms-box" id="post-form-box" style="display: none;">
+                    <div class="ms-box-header">Post a Bulletin</div>
+                    <div class="ms-box-content">
+                        <form id="bulletin-form" class="ms-form">
+                            <div class="ms-form-group">
+                                <label
+                                    class="ms-form-label"
+                                    for="bulletin-subject">Subject:</label
+                                >
+                                <input
+                                    type="text"
+                                    id="bulletin-subject"
+                                    name="subject"
+                                    class="ms-form-input"
+                                    placeholder="What's this about?"
+                                    maxlength="100"
+                                    required
+                                />
+                            </div>
+                            <div class="ms-form-group">
+                                <label class="ms-form-label" for="bulletin-body"
+                                    >Body:</label
+                                >
+                                <textarea
+                                    id="bulletin-body"
+                                    name="body"
+                                    class="ms-form-textarea"
+                                    placeholder="Write your bulletin here... All your friends will see this!"
+                                    style="min-height: 120px;"
+                                    required></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button
+                                    type="submit"
+                                    class="ms-form-submit"
+                                    id="submit-btn">Post Bulletin</button
+                                >
+                                <button
+                                    type="button"
+                                    class="ms-action-btn"
+                                    id="cancel-btn">Cancel</button
+                                >
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="ms-box">
+                    <div class="ms-box-header">Friend Bulletins</div>
+                    <div class="ms-box-content" id="bulletins-list">
+                        <div class="ms-loading">
+                            <div class="ms-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ms-box">
+                    <div class="ms-box-header ms-box-header-blue">
+                        My Bulletins
+                    </div>
+                    <div class="ms-box-content" id="my-bulletins-list">
+                        <div class="ms-loading">
+                            <div class="ms-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <Footer />
+</Layout>
+
+<style>
+    .bulletin-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .bulletin-item:last-child {
+        border-bottom: none;
+    }
+
+    .bulletin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .bulletin-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bulletin-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+    }
+
+    .bulletin-author-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bulletin-author-name {
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--ms-navy);
+    }
+
+    .bulletin-author-name a {
+        color: var(--ms-link);
+        text-decoration: none;
+    }
+
+    .bulletin-author-name a:hover {
+        text-decoration: underline;
+    }
+
+    .bulletin-time {
+        font-size: 10px;
+        color: #999;
+    }
+
+    .bulletin-subject {
+        font-size: 13px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        margin-bottom: 8px;
+    }
+
+    .bulletin-body {
+        font-size: 12px;
+        line-height: 1.6;
+        color: #444;
+    }
+
+    .bulletin-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 15px;
+    }
+
+    .bulletin-actions a {
+        font-size: 11px;
+        color: var(--ms-link);
+        text-decoration: none;
+    }
+
+    .bulletin-actions a:hover {
+        color: var(--ms-orange);
+    }
+
+    .empty-bulletins {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .empty-bulletins-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .empty-bulletins p {
+        font-size: 12px;
+        color: #666;
+        margin: 5px 0;
+    }
+</style>
+
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../lib/auth";
+    import {
+        postBulletin,
+        getBulletins,
+        getTopFriends,
+        getProfiles,
+    } from "../lib/atproto";
+
+    const postBtn = document.getElementById("post-bulletin-btn");
+    const cancelBtn = document.getElementById("cancel-btn");
+    const formBox = document.getElementById("post-form-box");
+    const bulletinsList = document.getElementById("bulletins-list")!;
+    const myBulletinsList = document.getElementById("my-bulletins-list")!;
+    const postedCount = document.getElementById("posted-count")!;
+    const friendsCount = document.getElementById("friends-count")!;
+
+    postBtn?.addEventListener("click", () => {
+        formBox!.style.display = "block";
+        formBox!.scrollIntoView({ behavior: "smooth" });
+    });
+
+    cancelBtn?.addEventListener("click", () => {
+        formBox!.style.display = "none";
+    });
+
+    // Render a bulletin item
+    function renderBulletin(bulletin: any, author?: any) {
+        const authorName = author?.displayName || author?.handle || "Unknown";
+        const authorHandle = author?.handle || "";
+        const avatar = author?.avatar || "/default-avatar.svg";
+
+        return `
+      <div class="bulletin-item">
+        <div class="bulletin-header">
+          <div class="bulletin-author">
+            <img src="${avatar}" alt="${authorName}" class="bulletin-avatar" />
+            <div class="bulletin-author-info">
+              <span class="bulletin-author-name">
+                <a href="/profile/${authorHandle}">${authorName}</a>
+              </span>
+              <span class="bulletin-time">${new Date(bulletin.createdAt).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+        <div class="bulletin-subject">${bulletin.subject}</div>
+        <div class="bulletin-body">${bulletin.body.replace(/\n/g, "<br>")}</div>
+      </div>
+    `;
+    }
+
+    async function loadBulletins() {
+        const session = await getSession();
+        if (!session) {
+            window.location.href = "/login";
+            return;
+        }
+
+        const agent = new Agent(session);
+
+        try {
+            // Load my bulletins
+            const myBulletins = await getBulletins(agent, session.did, 20);
+            postedCount.textContent = myBulletins.length.toString();
+
+            if (myBulletins.length === 0) {
+                myBulletinsList.innerHTML = `
+          <p class="ms-text-gray ms-text-small" style="padding: 10px;">
+            You haven't posted any bulletins yet.
+          </p>
+        `;
+            } else {
+                // Sort by most recent
+                myBulletins.sort(
+                    (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime(),
+                );
+
+                const profile = await agent.getProfile({ actor: session.did });
+                myBulletinsList.innerHTML = myBulletins
+                    .map((b) => renderBulletin(b, profile.data))
+                    .join("");
+            }
+
+            // Load friends' bulletins
+            const friendDids = await getTopFriends(agent, session.did);
+            friendsCount.textContent = friendDids.length.toString();
+
+            if (friendDids.length === 0) {
+                bulletinsList.innerHTML = `
+          <div class="empty-bulletins">
+            <div class="empty-bulletins-icon">📋</div>
+            <p>No friends yet!</p>
+            <p style="font-size: 11px; color: #999; margin-top: 10px;">
+              Add friends to see their bulletins here.
+            </p>
+          </div>
+        `;
+                return;
+            }
+
+            // Get profiles for all friends
+            const profiles = await getProfiles(agent, friendDids);
+            const profileMap = new Map(profiles.map((p) => [p?.did, p]));
+
+            // Get bulletins from all friends
+            const allFriendBulletins: { bulletin: any; author: any }[] = [];
+
+            for (const did of friendDids) {
+                try {
+                    const friendBulletins = await getBulletins(agent, did, 10);
+                    const author = profileMap.get(did);
+                    friendBulletins.forEach((b) =>
+                        allFriendBulletins.push({ bulletin: b, author }),
+                    );
+                } catch (e) {
+                    // Skip friends with no bulletins
+                }
+            }
+
+            if (allFriendBulletins.length === 0) {
+                bulletinsList.innerHTML = `
+          <div class="empty-bulletins">
+            <div class="empty-bulletins-icon">📋</div>
+            <p>No bulletins from your friends yet!</p>
+            <p style="font-size: 11px; color: #999; margin-top: 10px;">
+              Bulletins from people in your Top Friends will appear here.
+            </p>
+          </div>
+        `;
+                return;
+            }
+
+            // Sort by most recent
+            allFriendBulletins.sort(
+                (a, b) =>
+                    new Date(b.bulletin.createdAt).getTime() -
+                    new Date(a.bulletin.createdAt).getTime(),
+            );
+
+            bulletinsList.innerHTML = allFriendBulletins
+                .slice(0, 20)
+                .map(({ bulletin, author }) => renderBulletin(bulletin, author))
+                .join("");
+        } catch (error) {
+            console.error("Failed to load bulletins:", error);
+            bulletinsList.innerHTML = `
+        <div class="empty-bulletins">
+          <div class="empty-bulletins-icon">📋</div>
+          <p>No bulletins from your friends yet!</p>
+          <p style="font-size: 11px; color: #999; margin-top: 10px;">
+            Bulletins from people in your Top Friends will appear here.
+          </p>
+        </div>
+      `;
+            myBulletinsList.innerHTML = `
+        <p class="ms-text-gray ms-text-small" style="padding: 10px;">
+          You haven't posted any bulletins yet.
+        </p>
+      `;
+        }
+    }
+
+    loadBulletins();
+
+    // Handle form submission
+    const form = document.getElementById("bulletin-form") as HTMLFormElement;
+    const submitBtn = document.getElementById(
+        "submit-btn",
+    ) as HTMLButtonElement;
+
+    form?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Posting...";
+
+        const subject = (
+            document.getElementById("bulletin-subject") as HTMLInputElement
+        ).value.trim();
+        const body = (
+            document.getElementById("bulletin-body") as HTMLTextAreaElement
+        ).value.trim();
+
+        if (!subject || !body) {
+            alert("Please fill in both subject and body!");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Post Bulletin";
+            return;
+        }
+
+        try {
+            const session = await getSession();
+            if (!session) {
+                window.location.href = "/login";
+                return;
+            }
+
+            const agent = new Agent(session);
+            await postBulletin(agent, subject, body);
+
+            alert("Bulletin posted!");
+            form.reset();
+            formBox!.style.display = "none";
+
+            // Reload bulletins to show the new one
+            loadBulletins();
+        } catch (error) {
+            console.error("Failed to post bulletin:", error);
+            alert("Failed to post bulletin. Please try again.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Post Bulletin";
+        }
+    });
+</script>

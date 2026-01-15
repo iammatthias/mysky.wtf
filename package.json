@@ -1,0 +1,19 @@
+{
+  "name": "lonely-luminosity",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.12",
+    "@atproto/api": "^0.18.15",
+    "@atproto/oauth-client-browser": "^0.3.39",
+    "@node-rs/argon2": "^2.0.2",
+    "astro": "^5.16.9",
+    "simple-store-svelte": "^1.0.6"
+  }
+}

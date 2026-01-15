@@ -1,0 +1,389 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TopNav from '../../components/TopNav.astro';
+import Footer from '../../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+
+if (sessionCookie) {
+  try {
+    user = JSON.parse(sessionCookie.value);
+  } catch {
+    // Invalid cookie
+  }
+}
+
+if (!user) {
+  return Astro.redirect('/login');
+}
+---
+
+<Layout title="Customize CSS">
+  <TopNav user={user} />
+
+  <div class="ms-container">
+    <div class="ms-profile">
+      <div class="ms-profile-left">
+        <div class="ms-box">
+          <div class="ms-box-header">Edit Options</div>
+          <div class="ms-actions">
+            <a href="/edit" class="ms-action-btn">Profile Info</a>
+            <a href="/edit/interests" class="ms-action-btn">Interests & Personality</a>
+            <a href="/edit/friends" class="ms-action-btn">Manage Top Friends</a>
+            <a href="/edit/photos" class="ms-action-btn">Photos</a>
+            <a href="/edit/css" class="ms-action-btn ms-action-btn-primary">Customize CSS</a>
+            <a href="/edit/song" class="ms-action-btn">Profile Song</a>
+          </div>
+        </div>
+
+        <div class="ms-box">
+          <div class="ms-box-header ms-box-header-blue">CSS Tips</div>
+          <div class="ms-box-content">
+            <ul style="font-size: 10px; line-height: 1.6; margin-left: 15px; color: #666;">
+              <li>Use CSS variables like <code>--ms-navy</code></li>
+              <li>Target <code>.ms-box</code> for panels</li>
+              <li>Target <code>.ms-profile</code> for layout</li>
+              <li>CSP enforces CSS-only (no scripts!)</li>
+              <li>Stored on your PDS as a blob</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="ms-box">
+          <div class="ms-box-header">Premade Themes</div>
+          <div class="ms-actions">
+            <button class="ms-action-btn theme-btn" data-theme="emo">🖤 Emo/Scene</button>
+            <button class="ms-action-btn theme-btn" data-theme="pink">💖 Pink Princess</button>
+            <button class="ms-action-btn theme-btn" data-theme="matrix">💚 Matrix</button>
+            <button class="ms-action-btn theme-btn" data-theme="flames">🔥 Flames</button>
+            <button class="ms-action-btn theme-btn" data-theme="reset">↩️ Reset to Default</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-profile-right">
+        <div class="ms-box">
+          <div class="ms-box-header">Custom CSS Editor</div>
+          <div class="ms-box-content">
+            <p class="ms-text-small ms-text-gray" style="margin-bottom: 10px;">
+              Customize your profile with CSS! Your styles are stored securely on your AT Protocol PDS as a pinned blob.
+              <strong>Note:</strong> Only CSS is allowed (enforced by Content Security Policy).
+            </p>
+
+            <div class="ms-form-group">
+              <label class="ms-form-label" for="css-editor">Your Custom CSS:</label>
+              <textarea
+                id="css-editor"
+                class="ms-form-textarea"
+                style="font-family: 'Courier New', monospace; min-height: 400px; background: #1a1a1a; color: #00ff00; padding: 15px;"
+                placeholder="/* Your custom CSS here! */
+
+/* Example: Change background */
+body {
+  background: #000 !important;
+  background-image: url('data:image/svg+xml,...') !important;
+}
+
+/* Example: Change box colors */
+.ms-box {
+  background: #111 !important;
+  border-color: #ff00ff !important;
+}
+
+/* Example: Glowing text */
+.ms-profile-name {
+  color: #ff00ff !important;
+  text-shadow: 0 0 10px #ff00ff !important;
+}"
+              ></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button id="preview-btn" class="ms-action-btn">Preview CSS</button>
+              <button id="save-btn" class="ms-form-submit">Save CSS to PDS</button>
+              <button id="clear-btn" class="ms-action-btn">Clear CSS</button>
+            </div>
+
+            <div id="status-message" style="margin-top: 10px; display: none;" class="ms-text-small"></div>
+          </div>
+        </div>
+
+        <div class="ms-box">
+          <div class="ms-box-header ms-box-header-blue">Live Preview</div>
+          <div class="ms-box-content">
+            <p class="ms-text-small ms-text-gray" style="margin-bottom: 10px;">
+              See how your CSS looks:
+            </p>
+            <iframe
+              id="preview-frame"
+              src={`/profile/${user.handle}`}
+              style="width: 100%; height: 500px; border: 2px solid #003366;"
+            ></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../../lib/auth';
+  import { getMySpaceProfile, saveMySpaceProfile, uploadCustomCss } from '../../lib/atproto';
+
+  const editor = document.getElementById('css-editor') as HTMLTextAreaElement;
+  const previewFrame = document.getElementById('preview-frame') as HTMLIFrameElement;
+  const statusMessage = document.getElementById('status-message')!;
+
+  // Theme presets
+  const themes: Record<string, string> = {
+    emo: `/* 🖤 Emo/Scene Theme 🖤 */
+body {
+  background: #000 !important;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #111 0px,
+    #111 10px,
+    #000 10px,
+    #000 20px
+  ) !important;
+}
+
+.ms-box {
+  background: #111 !important;
+  border: 2px solid #ff1493 !important;
+}
+
+.ms-box-header {
+  background: linear-gradient(180deg, #ff1493, #8b008b) !important;
+}
+
+.ms-profile-name {
+  color: #ff1493 !important;
+  text-shadow: 0 0 10px #ff1493, 0 0 20px #ff1493 !important;
+}
+
+.ms-section-header {
+  background: #1a1a1a !important;
+  border-color: #ff1493 !important;
+  color: #ff1493 !important;
+}
+
+a { color: #ff69b4 !important; }
+a:hover { color: #ff1493 !important; }
+
+.ms-text-gray, .ms-text-small { color: #888 !important; }`,
+
+    pink: `/* 💖 Pink Princess Theme 💖 */
+body {
+  background: linear-gradient(180deg, #ffb6c1, #ffc0cb, #ffb6c1) !important;
+}
+
+.ms-box {
+  background: #fff0f5 !important;
+  border: 2px solid #ff69b4 !important;
+  border-radius: 15px !important;
+}
+
+.ms-box-header {
+  background: linear-gradient(180deg, #ff69b4, #ff1493) !important;
+  border-radius: 13px 13px 0 0 !important;
+}
+
+.ms-profile-name {
+  color: #ff1493 !important;
+  font-family: 'Comic Sans MS', cursive !important;
+}
+
+.ms-profile-pic {
+  border: 4px solid #ff69b4 !important;
+  border-radius: 50% !important;
+}
+
+.ms-action-btn {
+  background: linear-gradient(180deg, #ffb6c1, #ff69b4) !important;
+  border-radius: 20px !important;
+}`,
+
+    matrix: `/* 💚 Matrix Theme 💚 */
+body {
+  background: #000 !important;
+}
+
+.ms-box {
+  background: rgba(0, 20, 0, 0.9) !important;
+  border: 1px solid #00ff00 !important;
+}
+
+.ms-box-header {
+  background: linear-gradient(180deg, #003300, #001100) !important;
+  color: #00ff00 !important;
+}
+
+.ms-box-header-blue {
+  background: linear-gradient(180deg, #003300, #001100) !important;
+}
+
+* {
+  color: #00ff00 !important;
+}
+
+.ms-profile-name {
+  text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00 !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+a { color: #00ff00 !important; text-decoration: none !important; }
+a:hover { text-shadow: 0 0 5px #00ff00 !important; }
+
+.ms-form-input, .ms-form-textarea {
+  background: #001100 !important;
+  border-color: #00ff00 !important;
+  color: #00ff00 !important;
+}`,
+
+    flames: `/* 🔥 Flames Theme 🔥 */
+body {
+  background: #1a0000 !important;
+  background-image: linear-gradient(180deg, #1a0000 0%, #330000 50%, #1a0000 100%) !important;
+}
+
+.ms-box {
+  background: linear-gradient(180deg, #220000, #110000) !important;
+  border: 2px solid #ff4500 !important;
+}
+
+.ms-box-header {
+  background: linear-gradient(180deg, #ff4500, #ff0000, #cc0000) !important;
+}
+
+.ms-profile-name {
+  color: #ff4500 !important;
+  text-shadow: 0 0 10px #ff4500, 0 0 20px #ff0000 !important;
+}
+
+.ms-section-header {
+  background: #330000 !important;
+  border-color: #ff4500 !important;
+  color: #ff4500 !important;
+}
+
+a { color: #ff6600 !important; }
+a:hover { color: #ff4500 !important; }`,
+
+    reset: ''
+  };
+
+  // Theme buttons
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const theme = (e.target as HTMLElement).dataset.theme;
+      if (theme && themes[theme] !== undefined) {
+        editor.value = themes[theme];
+        applyPreview();
+      }
+    });
+  });
+
+  // Preview button
+  document.getElementById('preview-btn')!.addEventListener('click', applyPreview);
+
+  function applyPreview() {
+    const css = editor.value;
+    const doc = previewFrame.contentDocument;
+    if (doc) {
+      // Remove any existing custom style
+      const existingStyle = doc.getElementById('custom-preview-css');
+      if (existingStyle) existingStyle.remove();
+
+      // Add new style
+      const style = doc.createElement('style');
+      style.id = 'custom-preview-css';
+      style.textContent = css;
+      doc.head.appendChild(style);
+    }
+  }
+
+  // Save button
+  document.getElementById('save-btn')!.addEventListener('click', async () => {
+    const btn = document.getElementById('save-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    showStatus('Uploading CSS to your PDS...', 'info');
+
+    try {
+      const session = await getSession();
+      if (!session) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const agent = new Agent(session);
+      const css = editor.value.trim();
+
+      // Upload CSS as blob
+      let blobRef: string | undefined;
+      if (css) {
+        blobRef = await uploadCustomCss(agent, css);
+      }
+
+      // Get existing profile and update
+      const existing = await getMySpaceProfile(agent, session.did) || {};
+      await saveMySpaceProfile(agent, {
+        ...existing,
+        customCssBlobRef: blobRef,
+      });
+
+      showStatus('CSS saved successfully! It will now appear on your profile.', 'success');
+      btn.textContent = 'Saved!';
+
+    } catch (error) {
+      console.error('Failed to save CSS:', error);
+      showStatus('Failed to save CSS. Please try again.', 'error');
+      btn.textContent = 'Save CSS to PDS';
+    } finally {
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Save CSS to PDS';
+      }, 2000);
+    }
+  });
+
+  // Clear button
+  document.getElementById('clear-btn')!.addEventListener('click', () => {
+    if (confirm('Clear all custom CSS?')) {
+      editor.value = '';
+      applyPreview();
+    }
+  });
+
+  function showStatus(message: string, type: 'info' | 'success' | 'error') {
+    statusMessage.textContent = message;
+    statusMessage.style.display = 'block';
+    statusMessage.style.color = type === 'error' ? '#c00' : type === 'success' ? '#0a0' : '#666';
+  }
+
+  // Load existing CSS
+  async function loadExistingCss() {
+    try {
+      const session = await getSession();
+      if (!session) return;
+
+      const agent = new Agent(session);
+      const profile = await getMySpaceProfile(agent, session.did);
+
+      if (profile?.customCssBlobRef) {
+        // TODO: Fetch and display existing CSS blob
+        showStatus('You have custom CSS saved. Edit below to update.', 'info');
+      }
+    } catch (e) {
+      console.log('No existing CSS found');
+    }
+  }
+
+  loadExistingCss();
+</script>

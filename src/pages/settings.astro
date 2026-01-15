@@ -1,0 +1,271 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+
+// Redirect to login if not authenticated
+if (!user) {
+  return Astro.redirect('/login?redirect=/settings');
+}
+---
+
+<Layout title="Account Settings">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-profile-grid">
+      <div class="ms-profile-left">
+        <div class="ms-box">
+          <div class="ms-box-header">Settings Menu</div>
+          <div class="ms-box-content">
+            <ul class="settings-menu">
+              <li><a href="#account" class="active">Account</a></li>
+              <li><a href="#privacy">Privacy</a></li>
+              <li><a href="#notifications">Notifications</a></li>
+              <li><a href="#profile">Profile Settings</a></li>
+              <li><a href="#blocklist">Block List</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="ms-box" style="margin-top: 15px;">
+          <div class="ms-box-header">Quick Links</div>
+          <div class="ms-box-content">
+            <ul style="font-size: 12px; list-style: none; padding: 0; margin: 0;">
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/edit">Edit Profile</a>
+              </li>
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/edit/friends">Manage Top Friends</a>
+              </li>
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/edit/css">Custom CSS</a>
+              </li>
+              <li style="padding: 5px 0;">
+                <a href="/help">Help Center</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-profile-right">
+        <div class="ms-box" id="account">
+          <div class="ms-box-header">Account Information</div>
+          <div class="ms-box-content">
+            <table class="settings-table">
+              <tr>
+                <td><strong>Handle:</strong></td>
+                <td>@{user.handle}</td>
+              </tr>
+              <tr>
+                <td><strong>DID:</strong></td>
+                <td style="font-size: 10px; word-break: break-all;">{user.did}</td>
+              </tr>
+              <tr>
+                <td><strong>Display Name:</strong></td>
+                <td>{user.displayName || 'Not set'}</td>
+              </tr>
+            </table>
+            <p style="font-size: 11px; color: #666; margin-top: 15px;">
+              Your account is managed through the AT Protocol. To change your handle or other
+              account details, visit your PDS provider's settings.
+            </p>
+          </div>
+        </div>
+
+        <div class="ms-box" id="privacy" style="margin-top: 15px;">
+          <div class="ms-box-header">Privacy Settings</div>
+          <div class="ms-box-content">
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked disabled />
+                <span>Show my profile to everyone</span>
+              </label>
+              <p class="setting-desc">Your MySky profile is public by default.</p>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked disabled />
+                <span>Allow comments on my profile</span>
+              </label>
+              <p class="setting-desc">Let friends leave comments on your profile.</p>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" disabled />
+                <span>Hide my online status</span>
+              </label>
+              <p class="setting-desc">Don't show when you were last online.</p>
+            </div>
+            <p style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
+              Privacy settings coming soon!
+            </p>
+          </div>
+        </div>
+
+        <div class="ms-box" id="notifications" style="margin-top: 15px;">
+          <div class="ms-box-header">Notification Preferences</div>
+          <div class="ms-box-content">
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked disabled />
+                <span>New comment notifications</span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" checked disabled />
+                <span>New friend request notifications</span>
+              </label>
+            </div>
+            <div class="setting-item">
+              <label>
+                <input type="checkbox" disabled />
+                <span>Blog post notifications from friends</span>
+              </label>
+            </div>
+            <p style="font-size: 11px; color: #999; margin-top: 15px; font-style: italic;">
+              Notification settings coming soon!
+            </p>
+          </div>
+        </div>
+
+        <div class="ms-box" id="blocklist" style="margin-top: 15px;">
+          <div class="ms-box-header">Block List</div>
+          <div class="ms-box-content">
+            <p style="font-size: 12px; color: #666; text-align: center; padding: 20px;">
+              You haven't blocked anyone yet.
+            </p>
+            <p style="font-size: 11px; color: #999; text-align: center;">
+              Block list management uses AT Protocol moderation features.
+            </p>
+          </div>
+        </div>
+
+        <div class="ms-box" style="margin-top: 15px; border-color: #dc3545;">
+          <div class="ms-box-header" style="background: linear-gradient(to bottom, #dc3545, #c82333); color: white;">Danger Zone</div>
+          <div class="ms-box-content">
+            <p style="font-size: 12px; margin-bottom: 15px;">
+              <strong>Sign Out:</strong> End your MySky session on this device.
+            </p>
+            <a href="/api/logout" class="ms-button" style="background: #dc3545; border-color: #c82333;">
+              Sign Out
+            </a>
+            <p style="font-size: 11px; color: #666; margin-top: 15px;">
+              Note: MySky doesn't store your data. To delete your AT Protocol account entirely,
+              visit your PDS provider's settings.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .ms-profile-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 15px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .settings-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .settings-menu li {
+    padding: 8px 10px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .settings-menu li:last-child {
+    border-bottom: none;
+  }
+
+  .settings-menu a {
+    text-decoration: none;
+    color: var(--ms-navy);
+  }
+
+  .settings-menu a:hover,
+  .settings-menu a.active {
+    color: var(--ms-orange);
+  }
+
+  .settings-table {
+    width: 100%;
+    font-size: 12px;
+    border-collapse: collapse;
+  }
+
+  .settings-table td {
+    padding: 8px 5px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .settings-table td:first-child {
+    width: 120px;
+    color: var(--ms-navy);
+  }
+
+  .setting-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .setting-item:last-of-type {
+    border-bottom: none;
+  }
+
+  .setting-item label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .setting-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .setting-desc {
+    font-size: 11px;
+    color: #666;
+    margin: 5px 0 0 26px;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  .ms-button:hover {
+    opacity: 0.9;
+  }
+
+  @media (max-width: 768px) {
+    .ms-profile-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

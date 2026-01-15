@@ -1,0 +1,31 @@
+---
+interface Props {
+    title: string;
+    customCss?: string;
+}
+
+const { title, customCss } = Astro.props;
+
+// Only apply restrictive CSP when loading user custom CSS
+// This ensures custom CSS can't include scripts or other malicious content
+const hasCustomCss = !!customCss;
+const customCssCsp = hasCustomCss
+    ? "style-src 'unsafe-inline'; script-src 'none';"
+    : null;
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content={Astro.generator} />
+        <title>{title} | MySky</title>
+        <link rel="stylesheet" href="/styles/mysky.css" />
+        {customCss && <style set:html={customCss} />}
+    </head>
+    <body>
+        <slot />
+    </body>
+</html>

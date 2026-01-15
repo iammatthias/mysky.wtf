@@ -1,0 +1,361 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TopNav from '../../components/TopNav.astro';
+import Footer from '../../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+
+if (!user) {
+  return Astro.redirect('/login?redirect=/edit/privacy');
+}
+---
+
+<Layout title="Privacy Settings">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box" style="max-width: 800px; margin: 0 auto;">
+      <div class="ms-box-header">Privacy Settings</div>
+      <div class="ms-box-content">
+        <div class="edit-nav">
+          <a href="/edit">Profile</a>
+          <a href="/edit/photos">Photos</a>
+          <a href="/edit/song">Profile Song</a>
+          <a href="/edit/interests">Interests</a>
+          <a href="/edit/friends">Top Friends</a>
+          <a href="/edit/css">Custom CSS</a>
+          <a href="/edit/privacy" class="active">Privacy</a>
+        </div>
+
+        <form id="privacy-form" class="ms-form">
+          <h3 style="color: var(--ms-navy); margin: 20px 0 15px;">Profile Visibility</h3>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="profileVisibility" value="public" checked />
+              <span class="option-title">Public</span>
+              <span class="option-desc">Anyone can view your profile</span>
+            </label>
+          </div>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="profileVisibility" value="friends" />
+              <span class="option-title">Friends Only</span>
+              <span class="option-desc">Only people you follow can view your full profile</span>
+            </label>
+          </div>
+
+          <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Who Can Contact Me</h3>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="contactMe" value="anyone" checked />
+              <span class="option-title">Anyone</span>
+              <span class="option-desc">All MySky users can send you messages</span>
+            </label>
+          </div>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="contactMe" value="friends" />
+              <span class="option-title">Friends Only</span>
+              <span class="option-desc">Only people you follow can message you</span>
+            </label>
+          </div>
+
+          <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Blog Privacy</h3>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="blogVisibility" value="public" checked />
+              <span class="option-title">Public</span>
+              <span class="option-desc">Anyone can read your blog posts</span>
+            </label>
+          </div>
+
+          <div class="privacy-option">
+            <label class="privacy-label">
+              <input type="radio" name="blogVisibility" value="friends" />
+              <span class="option-title">Friends Only</span>
+              <span class="option-desc">Only people you follow can read your blog</span>
+            </label>
+          </div>
+
+          <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Additional Options</h3>
+
+          <div class="privacy-checkbox">
+            <label>
+              <input type="checkbox" name="showOnline" checked />
+              Show when I'm online
+            </label>
+          </div>
+
+          <div class="privacy-checkbox">
+            <label>
+              <input type="checkbox" name="showLastLogin" checked />
+              Show my last login time
+            </label>
+          </div>
+
+          <div class="privacy-checkbox">
+            <label>
+              <input type="checkbox" name="allowComments" checked />
+              Allow comments on my profile
+            </label>
+          </div>
+
+          <div class="privacy-checkbox">
+            <label>
+              <input type="checkbox" name="showFriends" checked />
+              Show my friends list on my profile
+            </label>
+          </div>
+
+          <div class="info-box">
+            <strong>Note:</strong> Your data is stored on your AT Protocol PDS, not on MySky servers.
+            These settings control how MySky displays your information, but your underlying data
+            remains accessible through other AT Protocol clients according to your PDS settings.
+          </div>
+
+          <div class="form-actions">
+            <a href="/edit" class="ms-button-secondary">← Back to Edit Profile</a>
+            <button type="submit" class="ms-button" id="save-btn">Save Privacy Settings</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .edit-nav {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: var(--ms-blue-light);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .edit-nav a {
+    padding: 6px 12px;
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--ms-navy);
+    background: white;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+
+  .edit-nav a:hover {
+    background: #f0f0f0;
+  }
+
+  .edit-nav a.active {
+    background: var(--ms-orange);
+    color: white;
+    border-color: #d45500;
+  }
+
+  .privacy-option {
+    margin-bottom: 10px;
+  }
+
+  .privacy-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    transition: all 0.2s;
+  }
+
+  .privacy-label:hover {
+    background: #f0f0f0;
+    border-color: var(--ms-orange);
+  }
+
+  .privacy-label input[type="radio"] {
+    margin-top: 3px;
+  }
+
+  .option-title {
+    font-weight: bold;
+    font-size: 12px;
+    color: var(--ms-navy);
+    display: block;
+  }
+
+  .option-desc {
+    font-size: 11px;
+    color: #666;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .privacy-checkbox {
+    margin-bottom: 10px;
+  }
+
+  .privacy-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ms-navy);
+    cursor: pointer;
+    padding: 8px 12px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+
+  .privacy-checkbox label:hover {
+    background: #f0f0f0;
+  }
+
+  .info-box {
+    margin-top: 25px;
+    padding: 15px;
+    background: var(--ms-blue-light);
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ms-navy);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+    cursor: pointer;
+  }
+
+  .ms-button-secondary {
+    display: inline-block;
+    padding: 8px 20px;
+    background: white;
+    color: var(--ms-navy);
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+  }
+
+  .ms-button:hover,
+  .ms-button-secondary:hover {
+    opacity: 0.9;
+  }
+</style>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../../lib/auth';
+  import { getMySpaceProfile, saveMySpaceProfile } from '../../lib/atproto';
+
+  async function loadPrivacySettings() {
+    const session = await getSession();
+    if (!session) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const agent = new Agent(session);
+
+    try {
+      const profile = await getMySpaceProfile(agent, session.did);
+      if (profile?.privacy) {
+        const p = profile.privacy;
+        if (p.profileVisibility) {
+          const radio = document.querySelector(`input[name="profileVisibility"][value="${p.profileVisibility}"]`) as HTMLInputElement;
+          if (radio) radio.checked = true;
+        }
+        if (p.contactMe) {
+          const radio = document.querySelector(`input[name="contactMe"][value="${p.contactMe}"]`) as HTMLInputElement;
+          if (radio) radio.checked = true;
+        }
+        if (p.blogVisibility) {
+          const radio = document.querySelector(`input[name="blogVisibility"][value="${p.blogVisibility}"]`) as HTMLInputElement;
+          if (radio) radio.checked = true;
+        }
+        (document.querySelector('input[name="showOnline"]') as HTMLInputElement).checked = p.showOnline !== false;
+        (document.querySelector('input[name="showLastLogin"]') as HTMLInputElement).checked = p.showLastLogin !== false;
+        (document.querySelector('input[name="allowComments"]') as HTMLInputElement).checked = p.allowComments !== false;
+        (document.querySelector('input[name="showFriends"]') as HTMLInputElement).checked = p.showFriends !== false;
+      }
+    } catch (e) {
+      console.log('No existing privacy settings found');
+    }
+  }
+
+  loadPrivacySettings();
+
+  const form = document.getElementById('privacy-form') as HTMLFormElement;
+  const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const session = await getSession();
+      if (!session) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const agent = new Agent(session);
+      const existingProfile = await getMySpaceProfile(agent, session.did) || {};
+
+      const privacyData = {
+        profileVisibility: (document.querySelector('input[name="profileVisibility"]:checked') as HTMLInputElement)?.value,
+        contactMe: (document.querySelector('input[name="contactMe"]:checked') as HTMLInputElement)?.value,
+        blogVisibility: (document.querySelector('input[name="blogVisibility"]:checked') as HTMLInputElement)?.value,
+        showOnline: (document.querySelector('input[name="showOnline"]') as HTMLInputElement).checked,
+        showLastLogin: (document.querySelector('input[name="showLastLogin"]') as HTMLInputElement).checked,
+        allowComments: (document.querySelector('input[name="allowComments"]') as HTMLInputElement).checked,
+        showFriends: (document.querySelector('input[name="showFriends"]') as HTMLInputElement).checked,
+      };
+
+      await saveMySpaceProfile(agent, { ...existingProfile, privacy: privacyData });
+
+      alert('Privacy settings saved!');
+      saveBtn.textContent = 'Saved!';
+
+      setTimeout(() => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Privacy Settings';
+      }, 2000);
+
+    } catch (error) {
+      console.error('Failed to save privacy settings:', error);
+      alert('Failed to save settings. Please try again.');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Privacy Settings';
+    }
+  });
+</script>

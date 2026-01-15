@@ -1,0 +1,75 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Privacy Policy">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">Privacy Policy</div>
+      <div class="ms-box-content">
+        <p style="font-size: 11px; color: var(--ms-gray); margin-bottom: 15px;">
+          Last updated: January 2025
+        </p>
+
+        <div class="ms-section-header">Data We Don't Collect</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 10px 0;">
+          MySky is designed with privacy in mind. We do <strong>not</strong> store:
+        </p>
+        <ul style="font-size: 12px; line-height: 1.8; margin: 10px 0 10px 20px;">
+          <li>Your profile content (stored on your PDS)</li>
+          <li>Your posts or blog entries (stored on your PDS)</li>
+          <li>Your friends list (stored on your PDS)</li>
+          <li>Your passwords (OAuth means we never see them)</li>
+          <li>Tracking cookies or advertising identifiers</li>
+        </ul>
+
+        <div class="ms-section-header">What We Do Store</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 10px 0;">
+          MySky stores a session cookie in your browser to keep you logged in. This cookie contains
+          your DID (decentralized identifier) and basic profile info for display purposes. It expires
+          after 24 hours.
+        </p>
+
+        <div class="ms-section-header">AT Protocol & Your PDS</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 10px 0;">
+          All your content is stored on your Personal Data Server (PDS). MySky communicates with
+          your PDS to read and write data on your behalf. The privacy of that data depends on your
+          PDS provider's policies.
+        </p>
+
+        <div class="ms-section-header">Third-Party Services</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 10px 0;">
+          MySky uses:
+        </p>
+        <ul style="font-size: 12px; line-height: 1.8; margin: 10px 0 10px 20px;">
+          <li><strong>Cloudflare Pages</strong> - For hosting. See Cloudflare's privacy policy.</li>
+          <li><strong>bsky.social</strong> - For handle resolution (unless you use a custom resolver).</li>
+          <li><strong>Your PDS provider</strong> - For all content storage and retrieval.</li>
+        </ul>
+
+        <div class="ms-section-header">Your Rights</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 10px 0;">
+          Since your data lives on your PDS, you have full control. You can export, delete, or
+          migrate your data at any time through your PDS provider. MySky has no ability to lock
+          you in or hold your data hostage.
+        </p>
+
+        <div style="margin-top: 20px; padding: 15px; background: var(--ms-blue-light); border-radius: 4px;">
+          <p style="font-size: 12px; margin: 0;">
+            <strong>Questions?</strong> Contact us at <a href="/contact">the contact page</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>

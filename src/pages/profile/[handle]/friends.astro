@@ -1,0 +1,313 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import TopNav from '../../../components/TopNav.astro';
+import Footer from '../../../components/Footer.astro';
+
+const { handle } = Astro.params;
+
+// Get current user from session
+const sessionCookie = Astro.cookies.get('ms_session');
+let currentUser = null;
+
+if (sessionCookie) {
+  try {
+    currentUser = JSON.parse(sessionCookie.value);
+  } catch {}
+}
+
+const isOwnProfile = currentUser?.handle === handle;
+---
+
+<Layout title={`${handle}'s Friends`}>
+  <TopNav user={currentUser} />
+
+  <div class="ms-container">
+    <div class="ms-box" style="max-width: 900px; margin: 0 auto;">
+      <div class="ms-box-header">
+        <span id="profile-name">{handle}</span>'s Friends
+      </div>
+      <div class="ms-box-content">
+        <div class="friends-header">
+          <a href={`/profile/${handle}`} class="back-link">← Back to Profile</a>
+          {isOwnProfile && (
+            <a href="/edit/friends" class="edit-link">Edit Top Friends</a>
+          )}
+        </div>
+
+        <div id="loading" class="loading-state">
+          <div class="ms-spinner"></div>
+          <p>Loading friends...</p>
+        </div>
+
+        <div id="friends-grid" class="friends-grid" style="display: none;">
+          <!-- Friends will be populated here -->
+        </div>
+
+        <div id="no-friends" class="empty-state" style="display: none;">
+          <div class="empty-icon">👥</div>
+          <h3>No Friends Yet</h3>
+          <p>
+            {isOwnProfile
+              ? "You haven't added any friends yet. Browse MySky to find people to connect with!"
+              : `${handle} hasn't added any friends yet.`
+            }
+          </p>
+          {isOwnProfile && (
+            <a href="/browse" class="ms-button">Browse Users</a>
+          )}
+        </div>
+
+        <div id="error" class="error-state" style="display: none;">
+          <p>Failed to load friends. Please try again later.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
+
+<script define:vars={{ handle }}>
+  window.__PROFILE_HANDLE__ = handle;
+</script>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../../../lib/auth';
+  import { getTopFriends, getProfiles, TOM_DID } from '../../../lib/atproto';
+
+  const handle = (window as any).__PROFILE_HANDLE__;
+
+  async function loadFriends() {
+    const loadingEl = document.getElementById('loading')!;
+    const gridEl = document.getElementById('friends-grid')!;
+    const noFriendsEl = document.getElementById('no-friends')!;
+    const errorEl = document.getElementById('error')!;
+
+    try {
+      const session = await getSession();
+      let agent: Agent;
+
+      if (session) {
+        agent = new Agent(session);
+      } else {
+        agent = new Agent({ service: 'https://public.api.bsky.app' });
+      }
+
+      // Resolve handle to DID
+      const resolved = await agent.resolveHandle({ handle });
+      const did = resolved.data.did;
+
+      // Update profile name
+      const profileResponse = await agent.getProfile({ actor: did });
+      const profileName = profileResponse.data.displayName || handle;
+      document.getElementById('profile-name')!.textContent = profileName;
+
+      // Get friends list
+      if (session) {
+        const friendDids = await getTopFriends(agent, did);
+
+        if (friendDids.length === 0) {
+          loadingEl.style.display = 'none';
+          noFriendsEl.style.display = 'block';
+          return;
+        }
+
+        // Fetch all friend profiles
+        const friendProfiles = await getProfiles(agent, friendDids);
+
+        // Render friends grid
+        gridEl.innerHTML = friendProfiles.map((friend, index) => {
+          const isTom = friendDids[index] === TOM_DID;
+          return `
+            <a href="/profile/${friend.handle}" class="friend-card ${isTom ? 'is-tom' : ''}">
+              <img src="${friend.avatar || '/default-avatar.svg'}" alt="${friend.displayName || friend.handle}" class="friend-avatar" />
+              <div class="friend-info">
+                <span class="friend-name">${friend.displayName || friend.handle}</span>
+                <span class="friend-handle">@${friend.handle}</span>
+                ${isTom ? '<span class="tom-badge">⭐ Tom from MySky</span>' : ''}
+              </div>
+            </a>
+          `;
+        }).join('');
+
+        loadingEl.style.display = 'none';
+        gridEl.style.display = 'grid';
+      } else {
+        loadingEl.style.display = 'none';
+        gridEl.innerHTML = '<p class="sign-in-prompt"><a href="/login">Sign in</a> to view friends list.</p>';
+        gridEl.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Failed to load friends:', error);
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+    }
+  }
+
+  loadFriends();
+</script>
+
+<style>
+  .friends-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .back-link,
+  .edit-link {
+    font-size: 12px;
+    color: var(--ms-navy);
+  }
+
+  .edit-link {
+    color: var(--ms-orange);
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .loading-state p {
+    font-size: 12px;
+    color: #666;
+    margin-top: 15px;
+  }
+
+  .ms-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid var(--ms-blue-light);
+    border-top-color: var(--ms-navy);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .friends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+  }
+
+  .friend-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .friend-card:hover {
+    background: white;
+    border-color: var(--ms-orange);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .friend-card.is-tom {
+    border-color: var(--ms-orange);
+    background: linear-gradient(135deg, #fff9f5 0%, #fff 100%);
+  }
+
+  .friend-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 2px solid var(--ms-navy);
+  }
+
+  .friend-card.is-tom .friend-avatar {
+    border-color: var(--ms-orange);
+  }
+
+  .friend-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .friend-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--ms-navy);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .friend-handle {
+    font-size: 11px;
+    color: #666;
+  }
+
+  .tom-badge {
+    font-size: 10px;
+    color: var(--ms-orange);
+    margin-top: 2px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+  }
+
+  .empty-state h3 {
+    color: var(--ms-navy);
+    margin-bottom: 10px;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #dc3545;
+  }
+
+  .sign-in-prompt {
+    text-align: center;
+    padding: 40px;
+    font-size: 14px;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  @media (max-width: 600px) {
+    .friends-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,220 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Jobs">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">MySky Jobs</div>
+      <div class="ms-box-content">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <h1 style="font-family: Georgia, serif; font-size: 36px; font-style: italic; color: var(--ms-navy);">
+            Join the <span style="color: var(--ms-orange);">MySky</span> Team
+          </h1>
+          <p style="font-size: 14px; color: var(--ms-gray); margin-top: 10px;">
+            Help us build the future of social networking (with a nostalgic twist)
+          </p>
+        </div>
+
+        <div class="ms-section-header">About Working at MySky</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 15px 0;">
+          MySky is an open-source project bringing back the spirit of early social networking
+          to the decentralized web. We're built on the AT Protocol, which means we're part of
+          something bigger - a movement to give users ownership of their digital identity and data.
+        </p>
+
+        <div class="ms-section-header" style="margin-top: 25px;">Open Positions</div>
+
+        <div class="job-listing">
+          <div class="job-header">
+            <h3>Open Source Contributors</h3>
+            <span class="job-type">Volunteer / Open Source</span>
+          </div>
+          <p class="job-desc">
+            MySky is open source and we welcome contributions! Whether you're a frontend developer,
+            designer, or AT Protocol enthusiast, there's a place for you. Check out our GitHub
+            repository to get started.
+          </p>
+          <div class="job-tags">
+            <span>TypeScript</span>
+            <span>Astro</span>
+            <span>AT Protocol</span>
+            <span>CSS</span>
+          </div>
+          <a href="https://github.com" target="_blank" class="job-apply">View on GitHub</a>
+        </div>
+
+        <div class="job-listing">
+          <div class="job-header">
+            <h3>Community Moderators</h3>
+            <span class="job-type">Volunteer</span>
+          </div>
+          <p class="job-desc">
+            Help keep MySky a safe and welcoming place! We're looking for community members
+            who can help moderate content, answer questions, and foster a positive environment.
+          </p>
+          <div class="job-tags">
+            <span>Community</span>
+            <span>Moderation</span>
+            <span>Support</span>
+          </div>
+          <a href="/contact" class="job-apply">Apply via Contact</a>
+        </div>
+
+        <div class="job-listing">
+          <div class="job-header">
+            <h3>CSS Theme Designers</h3>
+            <span class="job-type">Volunteer / Bounty</span>
+          </div>
+          <p class="job-desc">
+            Create awesome CSS themes that users can apply to their profiles! We're looking
+            for designers who can capture the nostalgic aesthetic while making it fresh and fun.
+          </p>
+          <div class="job-tags">
+            <span>CSS</span>
+            <span>Design</span>
+            <span>Creative</span>
+          </div>
+          <a href="/contact" class="job-apply">Apply via Contact</a>
+        </div>
+
+        <div class="no-positions-box">
+          <h3>Don't see a position that fits?</h3>
+          <p>
+            We're always interested in hearing from passionate people who want to contribute
+            to MySky. Whether you have ideas for features, want to help with documentation,
+            or just want to say hi - reach out!
+          </p>
+          <a href="/contact" class="ms-button">Get in Touch</a>
+        </div>
+
+        <div class="ms-section-header" style="margin-top: 30px;">Why Contribute to MySky?</div>
+
+        <ul style="font-size: 12px; line-height: 2; margin: 15px 0 15px 20px;">
+          <li><strong>Nostalgia with Purpose</strong> - Help bring back what made social media fun</li>
+          <li><strong>Decentralization</strong> - Be part of the AT Protocol ecosystem</li>
+          <li><strong>Open Source</strong> - Your work is visible and attributed to you</li>
+          <li><strong>Creative Freedom</strong> - We embrace experimentation and wild ideas</li>
+          <li><strong>Community</strong> - Join a group of people who remember when the internet was weird (and good)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .job-listing {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .job-header h3 {
+    font-size: 14px;
+    color: var(--ms-navy);
+    margin: 0;
+  }
+
+  .job-type {
+    font-size: 10px;
+    padding: 4px 10px;
+    background: var(--ms-blue-light);
+    color: var(--ms-navy);
+    border-radius: 12px;
+    font-weight: bold;
+  }
+
+  .job-desc {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #444;
+    margin-bottom: 15px;
+  }
+
+  .job-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+
+  .job-tags span {
+    font-size: 10px;
+    padding: 3px 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    color: #666;
+  }
+
+  .job-apply {
+    display: inline-block;
+    padding: 8px 16px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+
+  .job-apply:hover {
+    opacity: 0.9;
+  }
+
+  .no-positions-box {
+    margin-top: 25px;
+    padding: 25px;
+    background: var(--ms-blue-light);
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .no-positions-box h3 {
+    font-size: 14px;
+    color: var(--ms-navy);
+    margin-bottom: 10px;
+  }
+
+  .no-positions-box p {
+    font-size: 12px;
+    line-height: 1.7;
+    margin-bottom: 15px;
+    color: #444;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 10px 25px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  .ms-button:hover {
+    opacity: 0.9;
+  }
+</style>

@@ -1,0 +1,383 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopNav from "../../components/TopNav.astro";
+import Footer from "../../components/Footer.astro";
+
+const sessionCookie = Astro.cookies.get("ms_session");
+let user = null;
+if (sessionCookie) {
+    try {
+        user = JSON.parse(sessionCookie.value);
+    } catch {}
+}
+
+if (!user) {
+    return Astro.redirect("/login?redirect=/blog/drafts");
+}
+---
+
+<Layout title="My Drafts">
+    <TopNav user={user} />
+    <div class="ms-container">
+        <div class="ms-profile">
+            <div class="ms-profile-left">
+                <div class="ms-box">
+                    <div class="ms-box-header">Blog Controls</div>
+                    <div class="ms-actions">
+                        <a
+                            href="/blog/new"
+                            class="ms-action-btn ms-action-btn-primary"
+                            >Post New Entry</a
+                        >
+                        <a
+                            href="/blog/drafts"
+                            class="ms-action-btn ms-action-btn-active"
+                            >My Drafts</a
+                        >
+                        <a href="/blog/settings" class="ms-action-btn"
+                            >Blog Settings</a
+                        >
+                    </div>
+                </div>
+
+                <div class="ms-box">
+                    <div class="ms-box-header ms-box-header-blue">
+                        Quick Links
+                    </div>
+                    <div class="ms-actions">
+                        <a href="/blog" class="ms-action-btn">View My Blog</a>
+                        <a
+                            href={`/profile/${user.handle}/blog`}
+                            class="ms-action-btn">Public Blog Page</a
+                        >
+                    </div>
+                </div>
+
+                <div class="ms-ad">
+                    <div class="ms-ad-label">ADVERTISEMENT</div>
+                    <p>Writing is thinking!</p>
+                    <p class="ms-text-small">Keep those drafts coming</p>
+                </div>
+            </div>
+
+            <div class="ms-profile-right">
+                <div class="ms-box">
+                    <div class="ms-box-header">My Drafts</div>
+                    <div class="ms-box-content" id="drafts-list">
+                        <div class="ms-loading">
+                            <div class="ms-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <Footer />
+</Layout>
+
+<style>
+    .ms-action-btn-active {
+        background: var(--ms-orange) !important;
+        color: white !important;
+        border-color: #d45500 !important;
+    }
+
+    .draft-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .draft-item:last-child {
+        border-bottom: none;
+    }
+
+    .draft-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+
+    .draft-title {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        margin: 0;
+    }
+
+    .draft-title a {
+        color: var(--ms-link);
+        text-decoration: none;
+    }
+
+    .draft-title a:hover {
+        text-decoration: underline;
+    }
+
+    .draft-status {
+        font-size: 10px;
+        padding: 3px 8px;
+        background: #ffeeba;
+        color: #856404;
+        border-radius: 10px;
+    }
+
+    .draft-meta {
+        font-size: 11px;
+        color: #999;
+        margin-bottom: 10px;
+    }
+
+    .draft-preview {
+        font-size: 12px;
+        line-height: 1.5;
+        color: #666;
+        margin-bottom: 10px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .draft-actions {
+        display: flex;
+        gap: 15px;
+    }
+
+    .draft-actions a,
+    .draft-actions button {
+        font-size: 11px;
+        color: var(--ms-link);
+        text-decoration: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .draft-actions a:hover,
+    .draft-actions button:hover {
+        color: var(--ms-orange);
+    }
+
+    .draft-actions .delete-btn {
+        color: #c00;
+    }
+
+    .draft-actions .delete-btn:hover {
+        color: #f00;
+    }
+
+    .empty-drafts {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .empty-drafts-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .empty-drafts p {
+        font-size: 12px;
+        color: #666;
+        margin: 5px 0;
+    }
+</style>
+
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../lib/auth";
+    import {
+        getDraftDocuments,
+        updateDocument,
+        deleteDocument,
+        getRkeyFromUri,
+    } from "../../lib/atproto";
+
+    async function loadDrafts() {
+        const session = await getSession();
+        if (!session) {
+            window.location.href = "/login";
+            return;
+        }
+
+        const agent = new Agent(session);
+        const draftsList = document.getElementById("drafts-list")!;
+
+        try {
+            const drafts = await getDraftDocuments(agent, session.did, 50);
+
+            if (drafts.length === 0) {
+                draftsList.innerHTML = `
+          <div class="empty-drafts">
+            <div class="empty-drafts-icon">📝</div>
+            <p>No drafts yet!</p>
+            <p style="font-size: 11px; color: #999; margin-top: 10px;">
+              When you save a blog post as a draft, it will appear here.
+            </p>
+            <a href="/blog/new" class="ms-action-btn ms-action-btn-primary" style="margin-top: 15px; display: inline-block;">
+              Start Writing
+            </a>
+          </div>
+        `;
+                return;
+            }
+
+            // Sort by most recent first
+            drafts.sort((a, b) => {
+                const dateA = new Date(
+                    a.value.updatedAt || a.value.publishedAt,
+                ).getTime();
+                const dateB = new Date(
+                    b.value.updatedAt || b.value.publishedAt,
+                ).getTime();
+                return dateB - dateA;
+            });
+
+            draftsList.innerHTML = drafts
+                .map((draft) => {
+                    const rkey = getRkeyFromUri(draft.uri);
+                    const content =
+                        draft.value.content?.value ||
+                        draft.value.textContent ||
+                        "";
+                    const lastEdited =
+                        draft.value.updatedAt || draft.value.publishedAt;
+
+                    return `
+          <div class="draft-item" data-rkey="${rkey}">
+            <div class="draft-header">
+              <h3 class="draft-title">
+                <a href="/blog/edit/${rkey}">${draft.value.title || "Untitled Draft"}</a>
+              </h3>
+              <span class="draft-status">Draft</span>
+            </div>
+            <p class="draft-meta">
+              Last edited: ${new Date(lastEdited).toLocaleDateString()} at ${new Date(lastEdited).toLocaleTimeString()}
+            </p>
+            <p class="draft-preview">${content.substring(0, 150)}${content.length > 150 ? "..." : ""}</p>
+            <div class="draft-actions">
+              <a href="/blog/edit/${rkey}">Edit</a>
+              <button class="publish-btn" data-rkey="${rkey}">Publish</button>
+              <button class="delete-btn" data-rkey="${rkey}">Delete</button>
+            </div>
+          </div>
+        `;
+                })
+                .join("");
+
+            // Add publish handlers
+            document.querySelectorAll(".publish-btn").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const rkey = (btn as HTMLElement).dataset.rkey;
+                    if (!rkey) return;
+
+                    if (
+                        !confirm(
+                            "Publish this draft? It will become publicly visible.",
+                        )
+                    ) {
+                        return;
+                    }
+
+                    try {
+                        await updateDocument(agent, rkey, {
+                            visibility: "public",
+                        });
+
+                        // Remove from drafts list
+                        const item = document.querySelector(
+                            `.draft-item[data-rkey="${rkey}"]`,
+                        );
+                        if (item) item.remove();
+
+                        // Check if list is now empty
+                        if (
+                            draftsList.querySelectorAll(".draft-item")
+                                .length === 0
+                        ) {
+                            draftsList.innerHTML = `
+                <div class="empty-drafts">
+                  <div class="empty-drafts-icon">📝</div>
+                  <p>No drafts yet!</p>
+                  <p style="font-size: 11px; color: #999; margin-top: 10px;">
+                    When you save a blog post as a draft, it will appear here.
+                  </p>
+                  <a href="/blog/new" class="ms-action-btn ms-action-btn-primary" style="margin-top: 15px; display: inline-block;">
+                    Start Writing
+                  </a>
+                </div>
+              `;
+                        }
+
+                        alert("Draft published successfully!");
+                    } catch (error) {
+                        console.error("Failed to publish draft:", error);
+                        alert("Failed to publish draft. Please try again.");
+                    }
+                });
+            });
+
+            // Add delete handlers
+            document.querySelectorAll(".delete-btn").forEach((btn) => {
+                btn.addEventListener("click", async () => {
+                    const rkey = (btn as HTMLElement).dataset.rkey;
+                    if (!rkey) return;
+
+                    if (!confirm("Delete this draft? This cannot be undone.")) {
+                        return;
+                    }
+
+                    try {
+                        await deleteDocument(agent, rkey);
+
+                        // Remove from drafts list
+                        const item = document.querySelector(
+                            `.draft-item[data-rkey="${rkey}"]`,
+                        );
+                        if (item) item.remove();
+
+                        // Check if list is now empty
+                        if (
+                            draftsList.querySelectorAll(".draft-item")
+                                .length === 0
+                        ) {
+                            draftsList.innerHTML = `
+                <div class="empty-drafts">
+                  <div class="empty-drafts-icon">📝</div>
+                  <p>No drafts yet!</p>
+                  <p style="font-size: 11px; color: #999; margin-top: 10px;">
+                    When you save a blog post as a draft, it will appear here.
+                  </p>
+                  <a href="/blog/new" class="ms-action-btn ms-action-btn-primary" style="margin-top: 15px; display: inline-block;">
+                    Start Writing
+                  </a>
+                </div>
+              `;
+                        }
+                    } catch (error) {
+                        console.error("Failed to delete draft:", error);
+                        alert("Failed to delete draft. Please try again.");
+                    }
+                });
+            });
+        } catch (error) {
+            console.error("Failed to load drafts:", error);
+            draftsList.innerHTML = `
+        <div class="empty-drafts">
+          <div class="empty-drafts-icon">📝</div>
+          <p>No drafts yet!</p>
+          <p style="font-size: 11px; color: #999; margin-top: 10px;">
+            When you save a blog post as a draft, it will appear here.
+          </p>
+          <a href="/blog/new" class="ms-action-btn ms-action-btn-primary" style="margin-top: 15px; display: inline-block;">
+            Start Writing
+          </a>
+        </div>
+      `;
+        }
+    }
+
+    loadDrafts();
+</script>

@@ -1,0 +1,177 @@
+---
+// OAuth callback page - handles the redirect from the authorization server
+---
+
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Logging in... | MySky</title>
+        <style>
+            body {
+                font-family: "Trebuchet MS", Verdana, Arial, sans-serif;
+                background: #003366;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+            }
+            .container {
+                text-align: center;
+                max-width: 500px;
+                padding: 20px;
+            }
+            .logo {
+                font-family: Georgia, serif;
+                font-size: 48px;
+                font-style: italic;
+                margin-bottom: 20px;
+            }
+            .logo span {
+                color: #ff6600;
+            }
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                border-top-color: #ff6600;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin: 20px auto;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .message {
+                font-size: 14px;
+                color: #b2d8f7;
+            }
+            .error {
+                color: #ff6666;
+                margin-top: 20px;
+            }
+            .debug {
+                font-size: 10px;
+                color: #888;
+                margin-top: 20px;
+                text-align: left;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 10px;
+                border-radius: 4px;
+                word-break: break-all;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">My<span>Sky</span></div>
+            <div class="spinner" id="spinner"></div>
+            <p class="message" id="message">Initializing...</p>
+            <p class="error" id="error" style="display: none;"></p>
+            <div class="debug" id="debug" style="display: none;"></div>
+        </div>
+    </body>
+</html>
+
+<script>
+    import { getOAuthClient } from "../../lib/auth";
+    import { Agent } from "@atproto/api";
+
+    const messageEl = document.getElementById("message")!;
+    const errorEl = document.getElementById("error")!;
+    const spinnerEl = document.getElementById("spinner")!;
+    const debugEl = document.getElementById("debug")!;
+
+    function log(msg: string) {
+        console.log("[OAuth Callback]", msg);
+        debugEl.style.display = "block";
+        debugEl.innerHTML += msg + "<br>";
+    }
+
+    function showError(msg: string) {
+        console.error("OAuth error:", msg);
+        errorEl.textContent = msg;
+        errorEl.style.display = "block";
+        spinnerEl.style.display = "none";
+        messageEl.textContent = "Sign in failed";
+    }
+
+    async function handleCallback() {
+        try {
+            log("URL: " + window.location.href.substring(0, 100) + "...");
+            log("Hash: " + (window.location.hash ? "present" : "none"));
+            log("Search: " + (window.location.search ? "present" : "none"));
+
+            messageEl.textContent = "Loading OAuth client...";
+            log("Creating OAuth client...");
+
+            const client = await getOAuthClient();
+            log("OAuth client created");
+
+            messageEl.textContent = "Processing callback...";
+            log("Calling client.init()...");
+
+            // client.init() automatically handles callback params if present
+            const result = await client.init();
+            log(
+                "client.init() returned: " +
+                    (result
+                        ? "result with session=" + !!result.session
+                        : "undefined"),
+            );
+
+            if (result?.session) {
+                log("Session DID: " + result.session.did);
+                await saveSessionAndRedirect(result.session);
+            } else {
+                log("No session in result");
+                showError("No session returned. Please try logging in again.");
+                setTimeout(() => (window.location.href = "/login"), 3000);
+            }
+        } catch (error: any) {
+            log("Error: " + error.message);
+            console.error("OAuth callback error:", error);
+            showError(error.message || "Sign in failed. Please try again.");
+            setTimeout(() => (window.location.href = "/login"), 5000);
+        }
+    }
+
+    async function saveSessionAndRedirect(session: any) {
+        try {
+            messageEl.textContent = "Loading profile...";
+            log("Fetching profile for " + session.did);
+
+            const agent = new Agent(session);
+            const profile = await agent.getProfile({ actor: session.did });
+            log("Profile loaded: " + profile.data.handle);
+
+            const sessionData = {
+                did: session.did,
+                handle: profile.data.handle,
+                displayName: profile.data.displayName,
+                avatar: profile.data.avatar,
+            };
+
+            document.cookie = `ms_session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400; SameSite=Lax; Secure`;
+            log("Cookie set, redirecting...");
+
+            messageEl.textContent = "Redirecting...";
+            window.location.href = "/";
+        } catch (error: any) {
+            log("Profile error: " + error.message);
+            console.error("Profile fetch error:", error);
+            // Still redirect even if profile fetch fails
+            const sessionData = {
+                did: session.did,
+                handle: session.did,
+            };
+            document.cookie = `ms_session=${encodeURIComponent(JSON.stringify(sessionData))}; path=/; max-age=86400; SameSite=Lax; Secure`;
+            window.location.href = "/";
+        }
+    }
+
+    handleCallback();
+</script>

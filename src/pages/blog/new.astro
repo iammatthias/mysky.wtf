@@ -1,0 +1,382 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TopNav from "../../components/TopNav.astro";
+import Footer from "../../components/Footer.astro";
+
+const sessionCookie = Astro.cookies.get("ms_session");
+let user = null;
+
+if (sessionCookie) {
+    try {
+        user = JSON.parse(sessionCookie.value);
+    } catch {
+        // Invalid cookie
+    }
+}
+
+if (!user) {
+    return Astro.redirect("/login");
+}
+---
+
+<Layout title="New Blog Entry">
+    <TopNav user={user} />
+
+    <div class="ms-container">
+        <div class="ms-box" style="max-width: 800px; margin: 0 auto;">
+            <div class="ms-box-header">Post New Blog Entry</div>
+            <div class="ms-box-content">
+                <p
+                    class="ms-text-small ms-text-gray"
+                    style="margin-bottom: 15px;"
+                >
+                    Your blog post will be saved using the <a
+                        href="https://standard.site"
+                        target="_blank">standard.site</a
+                    > format, making it portable across the AT Protocol network.
+                </p>
+
+                <form id="blog-form" class="ms-form">
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="title">Title:</label>
+                        <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            class="ms-form-input"
+                            placeholder="Enter your blog post title..."
+                            required
+                            maxlength="128"
+                        />
+                    </div>
+
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="description"
+                            >Description / Excerpt:</label
+                        >
+                        <input
+                            type="text"
+                            id="description"
+                            name="description"
+                            class="ms-form-input"
+                            placeholder="A brief summary of your post (optional)"
+                            maxlength="300"
+                        />
+                        <p
+                            class="ms-text-small ms-text-gray"
+                            style="margin-top: 2px;"
+                        >
+                            Shown in previews and search results
+                        </p>
+                    </div>
+
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="content"
+                            >Content:</label
+                        >
+                        <textarea
+                            id="content"
+                            name="content"
+                            class="ms-form-textarea"
+                            placeholder="Write your blog post here...
+
+You can use Markdown formatting:
+# Heading
+**bold** and *italic*
+- bullet lists
+[links](https://example.com)
+
+Express yourself!"
+                            required
+                            style="min-height: 300px;"></textarea>
+                    </div>
+
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="tags">Tags:</label>
+                        <input
+                            type="text"
+                            id="tags"
+                            name="tags"
+                            class="ms-form-input"
+                            placeholder="music, thoughts, life (comma separated)"
+                        />
+                        <p
+                            class="ms-text-small ms-text-gray"
+                            style="margin-top: 2px;"
+                        >
+                            Help others find your post
+                        </p>
+                    </div>
+
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="cover-image"
+                            >Cover Image:</label
+                        >
+                        <input
+                            type="file"
+                            id="cover-image"
+                            name="coverImage"
+                            accept="image/*"
+                            class="ms-form-input"
+                        />
+                        <p
+                            class="ms-text-small ms-text-gray"
+                            style="margin-top: 2px;"
+                        >
+                            Optional thumbnail for your post (max 1MB)
+                        </p>
+                    </div>
+
+                    <div class="ms-form-group">
+                        <label class="ms-form-label" for="visibility"
+                            >Who can read this?</label
+                        >
+                        <select
+                            id="visibility"
+                            name="visibility"
+                            class="ms-form-select"
+                        >
+                            <option value="public"
+                                >Public - Anyone can view</option
+                            >
+                            <option value="friends">Friends Only</option>
+                            <option value="draft">Draft - Save for later</option
+                            >
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button
+                            type="submit"
+                            class="ms-form-submit"
+                            id="submit-btn"
+                        >
+                            Publish
+                        </button>
+                        <button
+                            type="button"
+                            class="ms-action-btn"
+                            id="draft-btn"
+                        >
+                            Save as Draft
+                        </button>
+                        <button
+                            type="button"
+                            class="ms-action-btn"
+                            id="preview-btn"
+                        >
+                            Preview
+                        </button>
+                        <a href="/blog" class="ms-action-btn">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Preview Modal -->
+        <div
+            id="preview-modal"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; overflow: auto; padding: 40px;"
+        >
+            <div class="ms-box" style="max-width: 700px; margin: 0 auto;">
+                <div class="ms-box-header">
+                    Preview
+                    <button
+                        id="close-preview"
+                        style="float: right; background: none; border: none; color: white; cursor: pointer; font-weight: bold;"
+                        >X</button
+                    >
+                </div>
+                <div class="ms-box-content">
+                    <div class="ms-blog-entry" id="preview-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <Footer />
+</Layout>
+
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../lib/auth";
+    import { createDocument, uploadImage } from "../../lib/atproto";
+
+    const form = document.getElementById("blog-form") as HTMLFormElement;
+    const previewBtn = document.getElementById("preview-btn")!;
+    const draftBtn = document.getElementById("draft-btn")!;
+    const previewModal = document.getElementById("preview-modal")!;
+    const closePreview = document.getElementById("close-preview")!;
+    const previewContent = document.getElementById("preview-content")!;
+    const submitBtn = document.getElementById(
+        "submit-btn",
+    ) as HTMLButtonElement;
+
+    // Simple markdown to HTML conversion for preview
+    function markdownToHtml(text: string): string {
+        return text
+            .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+            .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
+            .replace(/\*(.*)\*/gim, "<em>$1</em>")
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2">$1</a>')
+            .replace(/^- (.*$)/gim, "<li>$1</li>")
+            .replace(/\n/g, "<br>");
+    }
+
+    // Preview functionality
+    previewBtn.addEventListener("click", () => {
+        const title = (document.getElementById("title") as HTMLInputElement)
+            .value;
+        const content = (
+            document.getElementById("content") as HTMLTextAreaElement
+        ).value;
+        const description = (
+            document.getElementById("description") as HTMLInputElement
+        ).value;
+        const tags = (document.getElementById("tags") as HTMLInputElement)
+            .value;
+
+        const tagsHtml = tags
+            ? `<p class="ms-blog-tags">${tags
+                  .split(",")
+                  .map((t) => `<span class="tag">${t.trim()}</span>`)
+                  .join(" ")}</p>`
+            : "";
+
+        previewContent.innerHTML = `
+      <h3 class="ms-blog-title">${title || "Untitled"}</h3>
+      ${description ? `<p class="ms-blog-description">${description}</p>` : ""}
+      <p class="ms-blog-meta">Published: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+      ${tagsHtml}
+      <div class="ms-blog-content">${markdownToHtml(content) || "No content yet..."}</div>
+    `;
+        previewModal.style.display = "block";
+    });
+
+    closePreview.addEventListener("click", () => {
+        previewModal.style.display = "none";
+    });
+
+    previewModal.addEventListener("click", (e) => {
+        if (e.target === previewModal) {
+            previewModal.style.display = "none";
+        }
+    });
+
+    // Save as draft
+    draftBtn.addEventListener("click", async () => {
+        (document.getElementById("visibility") as HTMLSelectElement).value =
+            "draft";
+        form.dispatchEvent(new Event("submit"));
+    });
+
+    // Form submission
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const title = (
+            document.getElementById("title") as HTMLInputElement
+        ).value.trim();
+        const content = (
+            document.getElementById("content") as HTMLTextAreaElement
+        ).value.trim();
+        const description = (
+            document.getElementById("description") as HTMLInputElement
+        ).value.trim();
+        const tagsInput = (
+            document.getElementById("tags") as HTMLInputElement
+        ).value.trim();
+        const visibility = (
+            document.getElementById("visibility") as HTMLSelectElement
+        ).value as "public" | "friends" | "draft";
+        const coverImageInput = document.getElementById(
+            "cover-image",
+        ) as HTMLInputElement;
+
+        if (!title || !content) {
+            alert("Please fill in both the title and content!");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent =
+            visibility === "draft" ? "Saving..." : "Publishing...";
+
+        try {
+            const session = await getSession();
+            if (!session) {
+                window.location.href = "/login";
+                return;
+            }
+
+            const agent = new Agent(session);
+
+            // Parse tags
+            const tags = tagsInput
+                ? tagsInput
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter((t) => t.length > 0)
+                : undefined;
+
+            // Upload cover image if provided
+            let coverImage;
+            if (coverImageInput.files && coverImageInput.files[0]) {
+                const file = coverImageInput.files[0];
+                if (file.size > 1000000) {
+                    alert("Cover image must be less than 1MB");
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Publish";
+                    return;
+                }
+                coverImage = await uploadImage(agent, file);
+            }
+
+            await createDocument(agent, {
+                title,
+                content,
+                description: description || content.substring(0, 300),
+                tags,
+                visibility,
+                coverImage,
+            });
+
+            const message =
+                visibility === "draft"
+                    ? "Draft saved successfully!"
+                    : "Blog post published successfully!";
+            alert(message);
+            window.location.href = "/blog";
+        } catch (error) {
+            console.error("Failed to save blog entry:", error);
+            alert("Failed to save blog entry. Please try again.");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Publish";
+        }
+    });
+</script>
+
+<style>
+    .ms-blog-description {
+        font-size: 13px;
+        color: #666;
+        font-style: italic;
+        margin: 5px 0 10px;
+    }
+
+    .ms-blog-tags {
+        margin: 10px 0;
+    }
+
+    .ms-blog-tags .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        background: var(--ms-blue-light);
+        color: var(--ms-navy);
+        font-size: 10px;
+        border-radius: 10px;
+        margin-right: 5px;
+    }
+</style>

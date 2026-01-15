@@ -1,0 +1,63 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="About">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">About MySky</div>
+      <div class="ms-box-content">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h1 style="font-family: Georgia, serif; font-size: 48px; font-style: italic; color: var(--ms-navy);">
+            My<span style="color: var(--ms-orange);">Sky</span>
+          </h1>
+          <p style="font-style: italic; color: var(--ms-gray);">a place for friends</p>
+        </div>
+
+        <p style="font-size: 12px; line-height: 1.8; margin-bottom: 15px;">
+          <strong>MySky</strong> is a nostalgic tribute to the social networking era of the mid-2000s,
+          reimagined for the decentralized web. Built on the AT Protocol, MySky brings back the
+          customizable profiles, Top 8 Friends, and personal blogs that defined a generation's
+          online experience.
+        </p>
+
+        <p style="font-size: 12px; line-height: 1.8; margin-bottom: 15px;">
+          Unlike the original, your data on MySky is truly yours. Your profile, posts, and connections
+          are stored on your Personal Data Server (PDS) using the AT Protocol - the same technology
+          that powers Bluesky. This means you can take your identity and content anywhere.
+        </p>
+
+        <div class="ms-section-header">Features</div>
+        <ul style="font-size: 12px; line-height: 1.8; margin: 15px 0 15px 20px;">
+          <li>Customizable profiles with custom CSS support</li>
+          <li>Top 8 Friends (Tom is everyone's first friend!)</li>
+          <li>Personal blogs with the standard.site lexicon</li>
+          <li>Mood indicators and interests</li>
+          <li>Decentralized identity via AT Protocol OAuth</li>
+          <li>Your data, your servers, your rules</li>
+        </ul>
+
+        <div class="ms-section-header">Open Source</div>
+        <p style="font-size: 12px; line-height: 1.8; margin: 15px 0;">
+          MySky is open source. The code is available for anyone to inspect, modify, and deploy.
+        </p>
+
+        <div style="margin-top: 20px; padding: 15px; background: var(--ms-blue-light); border-radius: 4px; text-align: center;">
+          <p style="font-size: 14px; margin: 0; color: var(--ms-navy);">
+            <strong>Thanks for the add! 💕</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>

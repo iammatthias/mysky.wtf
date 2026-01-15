@@ -1,0 +1,224 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TopNav from '../../components/TopNav.astro';
+import Footer from '../../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+
+// Redirect to login if not authenticated
+if (!user) {
+  return Astro.redirect('/login?redirect=/edit/photos');
+}
+---
+
+<Layout title="Edit Photos">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box" style="max-width: 800px; margin: 0 auto;">
+      <div class="ms-box-header">My Photos</div>
+      <div class="ms-box-content">
+        <div class="edit-nav">
+          <a href="/edit">Profile</a>
+          <a href="/edit/photos" class="active">Photos</a>
+          <a href="/edit/song">Profile Song</a>
+          <a href="/edit/interests">Interests</a>
+          <a href="/edit/friends">Top Friends</a>
+          <a href="/edit/css">Custom CSS</a>
+        </div>
+
+        <h3 style="color: var(--ms-navy); margin: 20px 0 15px;">Profile Picture</h3>
+        <div class="photo-upload-area">
+          <div class="current-photo">
+            <img src={user.avatar || '/default-avatar.png'} alt="Current profile photo" id="currentAvatar" />
+          </div>
+          <div class="photo-controls">
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+              Your profile picture is pulled from your AT Protocol profile.
+              To change it, update your avatar on Bluesky or your PDS provider.
+            </p>
+            <a href="https://bsky.app/settings" target="_blank" class="ms-button-secondary">
+              Update on Bluesky →
+            </a>
+          </div>
+        </div>
+
+        <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Photo Albums</h3>
+        <div class="albums-grid">
+          <div class="album-card create-new">
+            <div class="album-icon">📁</div>
+            <span>Create Album</span>
+          </div>
+        </div>
+        <p style="font-size: 11px; color: #999; margin-top: 15px; text-align: center; font-style: italic;">
+          Photo albums coming soon! Your photos will be stored on your AT Protocol PDS.
+        </p>
+
+        <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Recent Uploads</h3>
+        <div class="photos-empty">
+          <div style="font-size: 48px; margin-bottom: 15px;">📷</div>
+          <p>No photos uploaded yet</p>
+          <p style="font-size: 11px; color: #999;">
+            Photo uploads will be available soon!
+          </p>
+        </div>
+
+        <div class="form-actions">
+          <a href="/edit" class="ms-button-secondary">← Back to Edit Profile</a>
+          <a href={`/profile/${user.handle}`} class="ms-button">View My Profile</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .edit-nav {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: var(--ms-blue-light);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .edit-nav a {
+    padding: 6px 12px;
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--ms-navy);
+    background: white;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+
+  .edit-nav a:hover {
+    background: #f0f0f0;
+  }
+
+  .edit-nav a.active {
+    background: var(--ms-orange);
+    color: white;
+    border-color: #d45500;
+  }
+
+  .photo-upload-area {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px dashed #ccc;
+  }
+
+  .current-photo img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 3px solid var(--ms-navy);
+  }
+
+  .photo-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .albums-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+  }
+
+  .album-card {
+    aspect-ratio: 1;
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f9f9f9;
+  }
+
+  .album-card:hover {
+    border-color: var(--ms-orange);
+    background: #fff;
+  }
+
+  .album-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .album-card span {
+    font-size: 11px;
+    color: var(--ms-navy);
+  }
+
+  .photos-empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px dashed #ccc;
+  }
+
+  .photos-empty p {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  .ms-button-secondary {
+    display: inline-block;
+    padding: 8px 20px;
+    background: white;
+    color: var(--ms-navy);
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+  }
+
+  .ms-button:hover,
+  .ms-button-secondary:hover {
+    opacity: 0.9;
+  }
+
+  @media (max-width: 600px) {
+    .photo-upload-area {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+</style>

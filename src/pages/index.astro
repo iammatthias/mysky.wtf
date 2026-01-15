@@ -1,0 +1,162 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+// Check for session cookie (set by OAuth callback)
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+
+if (sessionCookie) {
+  try {
+    user = JSON.parse(sessionCookie.value);
+  } catch {
+    // Invalid cookie
+  }
+}
+---
+
+<Layout title="A Place for Friends">
+  <TopNav user={user} />
+
+  <div class="ms-container">
+    {user ? (
+      <!-- Logged in home page -->
+      <div class="ms-profile">
+        <div class="ms-profile-left">
+          <div class="ms-box">
+            <div class="ms-box-header">Welcome Back!</div>
+            <div class="ms-box-content">
+              <img
+                src={user.avatar || '/default-avatar.svg'}
+                alt={user.displayName || user.handle}
+                class="ms-profile-pic"
+              />
+              <p class="ms-profile-name">{user.displayName || user.handle}</p>
+              <p class="ms-profile-tagline">@{user.handle}</p>
+              <div class="ms-actions ms-mt-10">
+                <a href={`/profile/${user.handle}`} class="ms-action-btn ms-action-btn-primary">View My Profile</a>
+                <a href="/edit" class="ms-action-btn">Edit Profile</a>
+                <a href="/blog/new" class="ms-action-btn">Post New Blog</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="ms-box">
+            <div class="ms-box-header ms-box-header-blue">Quick Links</div>
+            <div class="ms-actions">
+              <a href="/browse" class="ms-action-btn">Browse Users</a>
+              <a href="/search" class="ms-action-btn">Find Friends</a>
+              <a href="/messages" class="ms-action-btn">Messages</a>
+              <a href="/settings" class="ms-action-btn">Account Settings</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="ms-profile-right">
+          <div class="ms-box">
+            <div class="ms-box-header">My Bulletins</div>
+            <div class="ms-box-content">
+              <p class="ms-text-gray ms-text-small">No new bulletins. <a href="/bulletins">Post a bulletin</a></p>
+            </div>
+          </div>
+
+          <div class="ms-box">
+            <div class="ms-box-header ms-box-header-blue">My Friend Space</div>
+            <div class="ms-box-content" id="friend-space">
+              <p class="ms-text-gray ms-text-small">Loading your friends...</p>
+            </div>
+          </div>
+
+          <div class="ms-box">
+            <div class="ms-box-header">Cool New People</div>
+            <div class="ms-box-content" id="cool-people">
+              <p class="ms-text-gray ms-text-small">Discover new friends on the network!</p>
+            </div>
+          </div>
+
+          <div class="ms-ad">
+            <div class="ms-ad-label">ADVERTISEMENT</div>
+            <p>🎸 Get your FREE MySky music player!</p>
+            <p class="ms-text-small">Customize your profile with your favorite tunes</p>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <!-- Logged out landing page -->
+      <div class="ms-login-page" style="min-height: auto; padding: 60px 20px; margin: -10px; width: calc(100% + 20px);">
+        <h1 class="ms-login-logo">My<span>Sky</span></h1>
+        <p class="ms-login-tagline">a place for friends</p>
+
+        <div class="ms-login-box">
+          <h2 class="ms-login-title">Member Login</h2>
+
+          <form class="ms-form" id="login-form">
+            <div class="ms-form-group">
+              <label class="ms-form-label" for="handle">Bluesky Handle or DID:</label>
+              <input
+                type="text"
+                id="handle"
+                name="handle"
+                class="ms-form-input"
+                placeholder="yourname.bsky.social"
+                required
+              />
+            </div>
+
+            <button type="submit" class="ms-form-submit" style="width: 100%;">
+              Sign In with AT Protocol
+            </button>
+          </form>
+
+          <div class="ms-login-footer">
+            <p>Don't have a Bluesky account?</p>
+            <p><a href="https://bsky.app" target="_blank">Sign up at bsky.app</a></p>
+          </div>
+        </div>
+
+        <div style="max-width: 600px; margin-top: 30px; text-align: center;">
+          <div class="ms-box">
+            <div class="ms-box-header">What is MySky?</div>
+            <div class="ms-box-content">
+              <p style="font-size: 12px; line-height: 1.6;">
+                <strong>MySky</strong> is a social networking website offering an interactive,
+                user-submitted network of friends, personal profiles, blogs, groups, photos,
+                music and videos.
+              </p>
+              <p style="font-size: 12px; line-height: 1.6; margin-top: 10px;">
+                Now powered by the <strong>AT Protocol</strong>, your data is truly yours.
+                Take your friends, posts, and identity anywhere on the decentralized web.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <Footer />
+</Layout>
+
+<script>
+  import { login } from '../lib/auth';
+
+  const form = document.getElementById('login-form') as HTMLFormElement;
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const handleInput = document.getElementById('handle') as HTMLInputElement;
+      const handle = handleInput.value.trim();
+
+      if (!handle) return;
+
+      try {
+        await login(handle);
+      } catch (error) {
+        console.error('Login failed:', error);
+        alert('Login failed. Please check your handle and try again.');
+      }
+    });
+  }
+</script>

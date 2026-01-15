@@ -1,0 +1,81 @@
+---
+interface Props {
+    user?: {
+        did: string;
+        handle: string;
+        avatar?: string;
+    } | null;
+}
+
+const { user } = Astro.props;
+---
+
+<nav class="ms-topnav">
+    <div class="ms-topnav-inner">
+        <a href="/" class="ms-logo">
+            <span class="ms-logo-text">My<span>Sky</span></span>
+        </a>
+
+        <ul class="ms-nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/browse">Browse</a></li>
+            <li><a href="/search">Search</a></li>
+            {
+                user && (
+                    <>
+                        <li>
+                            <a href={`/profile/${user.handle}`}>My Profile</a>
+                        </li>
+                        <li>
+                            <a href="/edit">Edit Profile</a>
+                        </li>
+                        <li>
+                            <a href="/blog">Blog</a>
+                        </li>
+                    </>
+                )
+            }
+        </ul>
+
+        <div class="ms-nav-user">
+            {
+                user ? (
+                    <>
+                        <img
+                            src={user.avatar || "/default-avatar.svg"}
+                            alt={user.handle}
+                            class="ms-nav-avatar"
+                        />
+                        <span class="ms-nav-handle">@{user.handle}</span>
+                        <a
+                            href="/api/logout"
+                            class="ms-action-btn"
+                            style="padding: 2px 8px; font-size: 10px;"
+                        >
+                            Logout
+                        </a>
+                    </>
+                ) : (
+                    <a
+                        href="/login"
+                        class="ms-action-btn ms-action-btn-primary"
+                        style="padding: 4px 12px;"
+                    >
+                        Sign In
+                    </a>
+                )
+            }
+        </div>
+    </div>
+</nav>
+
+<nav class="ms-subnav">
+    <div class="ms-subnav-inner">
+        <a href="/help">Help</a>
+        <a href="/about">About</a>
+        <a href="/terms">Terms</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/safety">Safety Tips</a>
+        <a href="/contact">Contact MySky</a>
+    </div>
+</nav>

@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Contact Us">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">Contact MySky</div>
+      <div class="ms-box-content">
+        <h2 style="color: var(--ms-navy); margin-bottom: 15px;">Get in Touch</h2>
+
+        <p style="font-size: 12px; margin: 10px 0;">
+          Have a question, suggestion, or just want to say hi? We'd love to hear from you!
+        </p>
+
+        <div class="ms-section-header">General Inquiries</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          For general questions about MySky, reach out on the AT Protocol network:
+        </p>
+        <ul style="font-size: 12px; margin: 10px 0; padding-left: 20px;">
+          <li>Follow <a href="/profile/mysky.wtf">@mysky.wtf</a> for updates and announcements</li>
+          <li>Tag us in your posts - we love seeing how you customize your profiles!</li>
+        </ul>
+
+        <div class="ms-section-header">Technical Support</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          Having trouble with MySky? Check out our <a href="/help">Help Center</a> first.
+          If you're still stuck, describe your issue with as much detail as possible including:
+        </p>
+        <ul style="font-size: 12px; margin: 10px 0; padding-left: 20px;">
+          <li>Your handle (e.g., yourname.bsky.social)</li>
+          <li>What you were trying to do</li>
+          <li>Any error messages you saw</li>
+          <li>Your browser and device</li>
+        </ul>
+
+        <div class="ms-section-header">Report Abuse</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          To report harassment, spam, or other abuse, please visit our <a href="/safety">Safety Center</a>
+          for guidance on using AT Protocol moderation tools.
+        </p>
+
+        <div class="ms-section-header">Business Inquiries</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          For partnership opportunities, press inquiries, or other business matters,
+          please reach out through the AT Protocol network or visit our GitHub.
+        </p>
+
+        <div style="margin-top: 20px; padding: 15px; background: var(--ms-blue-light); border-radius: 4px;">
+          <p style="font-size: 12px; margin: 0; text-align: center;">
+            <strong>Thanks for being part of MySky!</strong><br />
+            A place for friends, powered by the AT Protocol.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>

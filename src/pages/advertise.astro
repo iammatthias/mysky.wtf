@@ -1,0 +1,160 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Advertise">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">Advertise on MySky</div>
+      <div class="ms-box-content">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <h1 style="font-family: Georgia, serif; font-size: 36px; font-style: italic; color: var(--ms-navy);">
+            Reach the <span style="color: var(--ms-orange);">MySky</span> Community
+          </h1>
+          <p style="font-size: 14px; color: var(--ms-gray); margin-top: 10px;">
+            Connect with a passionate, creative community of users
+          </p>
+        </div>
+
+        <div class="ad-grid">
+          <div class="ad-option">
+            <div class="ad-icon">📢</div>
+            <h3>Banner Ads</h3>
+            <p>Classic banner placements throughout the site. Perfect for brand awareness campaigns.</p>
+            <div class="ad-price">Contact for pricing</div>
+          </div>
+
+          <div class="ad-option">
+            <div class="ad-icon">⭐</div>
+            <h3>Featured Profiles</h3>
+            <p>Get your brand's profile featured in the "Cool New People" section on user homepages.</p>
+            <div class="ad-price">Contact for pricing</div>
+          </div>
+
+          <div class="ad-option">
+            <div class="ad-icon">🎵</div>
+            <h3>Music Promotions</h3>
+            <p>Promote artists and bands to our music-loving community. Perfect for new releases.</p>
+            <div class="ad-price">Contact for pricing</div>
+          </div>
+
+          <div class="ad-option">
+            <div class="ad-icon">📰</div>
+            <h3>Sponsored Bulletins</h3>
+            <p>Reach users directly through sponsored bulletin placements in their feeds.</p>
+            <div class="ad-price">Contact for pricing</div>
+          </div>
+        </div>
+
+        <div class="ms-section-header" style="margin-top: 30px;">Why Advertise on MySky?</div>
+
+        <ul style="font-size: 12px; line-height: 2; margin: 15px 0 15px 20px;">
+          <li><strong>Engaged Community</strong> - Our users spend time customizing profiles and connecting</li>
+          <li><strong>Creative Audience</strong> - Artists, musicians, and creators call MySky home</li>
+          <li><strong>Nostalgia Factor</strong> - Tap into the powerful emotion of early social media memories</li>
+          <li><strong>Decentralized Values</strong> - Users who care about owning their data and identity</li>
+          <li><strong>Non-Intrusive Placements</strong> - Ads that fit naturally into the MySky aesthetic</li>
+        </ul>
+
+        <div class="ms-section-header" style="margin-top: 30px;">Advertising Guidelines</div>
+
+        <p style="font-size: 12px; line-height: 1.8; margin: 15px 0;">
+          We maintain strict quality standards for all advertisements on MySky:
+        </p>
+
+        <ul style="font-size: 12px; line-height: 1.8; margin: 0 0 15px 20px;">
+          <li>No misleading or deceptive content</li>
+          <li>No malware, phishing, or suspicious downloads</li>
+          <li>No adult content or gambling (unless age-gated)</li>
+          <li>Ads must match the MySky aesthetic when possible</li>
+          <li>All advertisements clearly labeled as such</li>
+        </ul>
+
+        <div style="margin-top: 30px; padding: 20px; background: var(--ms-blue-light); border-radius: 4px; text-align: center;">
+          <h3 style="color: var(--ms-navy); margin-bottom: 10px;">Ready to get started?</h3>
+          <p style="font-size: 12px; margin-bottom: 15px;">
+            Contact our advertising team to discuss your campaign needs.
+          </p>
+          <a href="/contact" class="ms-button">Contact Us</a>
+        </div>
+
+        <p style="font-size: 11px; color: var(--ms-gray); text-align: center; margin-top: 20px; font-style: italic;">
+          Note: MySky is an open-source project. Advertising revenue helps keep the platform running
+          and supports continued development.
+        </p>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .ad-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+  }
+
+  .ad-option {
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .ad-option:hover {
+    border-color: var(--ms-orange);
+    transform: translateY(-2px);
+  }
+
+  .ad-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .ad-option h3 {
+    font-size: 14px;
+    color: var(--ms-navy);
+    margin-bottom: 10px;
+  }
+
+  .ad-option p {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #666;
+    margin-bottom: 15px;
+  }
+
+  .ad-price {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--ms-orange);
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 10px 25px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  .ms-button:hover {
+    opacity: 0.9;
+  }
+</style>

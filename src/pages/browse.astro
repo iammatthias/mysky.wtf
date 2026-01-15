@@ -1,0 +1,179 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+
+if (sessionCookie) {
+  try {
+    user = JSON.parse(sessionCookie.value);
+  } catch {
+    // Invalid cookie
+  }
+}
+---
+
+<Layout title="Browse Users">
+  <TopNav user={user} />
+
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">Browse MySky</div>
+      <div class="ms-box-content">
+        <p class="ms-text-small ms-text-gray" style="margin-bottom: 15px;">
+          Find new friends on the AT Protocol network! Search by handle or name.
+        </p>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <input
+            type="text"
+            id="search-input"
+            class="ms-form-input"
+            placeholder="Search for users..."
+            style="flex: 1; font-size: 14px; padding: 10px;"
+          />
+          <button id="search-btn" class="ms-form-submit" style="padding: 10px 25px;">
+            Search
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ms-box">
+      <div class="ms-box-header ms-box-header-blue">Search Results</div>
+      <div id="results" class="ms-search-results">
+        <p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+          Enter a search term above to find users
+        </p>
+      </div>
+    </div>
+
+    {user && (
+      <div class="ms-box">
+        <div class="ms-box-header">People You May Know</div>
+        <div id="suggestions" class="ms-search-results">
+          <p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">
+            Loading suggestions...
+          </p>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <Footer />
+</Layout>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../lib/auth';
+  import { searchUsers } from '../lib/atproto';
+
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const searchBtn = document.getElementById('search-btn') as HTMLButtonElement;
+  const resultsContainer = document.getElementById('results')!;
+  const suggestionsContainer = document.getElementById('suggestions');
+
+  let agent: Agent;
+
+  async function init() {
+    const session = await getSession();
+    if (session) {
+      agent = new Agent(session);
+      loadSuggestions();
+    } else {
+      agent = new Agent({ service: 'https://public.api.bsky.app' });
+    }
+  }
+
+  async function search(query: string) {
+    if (!query.trim()) return;
+
+    searchBtn.disabled = true;
+    searchBtn.textContent = 'Searching...';
+    resultsContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">Searching...</p>';
+
+    try {
+      const results = await searchUsers(agent, query, 30);
+
+      if (results.length === 0) {
+        resultsContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center; padding: 40px;">No users found. Try a different search term.</p>';
+        return;
+      }
+
+      resultsContainer.innerHTML = results.map(user => `
+        <a href="/profile/${user.handle}" class="ms-search-card">
+          <img src="${user.avatar || '/default-avatar.svg'}" alt="${user.displayName || user.handle}" class="ms-search-avatar" />
+          <span class="ms-search-name">${user.displayName || user.handle}</span>
+          <span class="ms-search-handle">@${user.handle}</span>
+        </a>
+      `).join('');
+
+    } catch (error) {
+      console.error('Search failed:', error);
+      resultsContainer.innerHTML = '<p class="ms-text-gray" style="grid-column: 1 / -1; text-align: center; padding: 40px;">Search failed. Please try again.</p>';
+    } finally {
+      searchBtn.disabled = false;
+      searchBtn.textContent = 'Search';
+    }
+  }
+
+  async function loadSuggestions() {
+    if (!suggestionsContainer || !agent.session) return;
+
+    try {
+      // Get some suggested users (followers of people you follow)
+      const following = await agent.getFollows({ actor: agent.session.did, limit: 10 });
+
+      if (following.data.follows.length === 0) {
+        suggestionsContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">Follow some people to get suggestions!</p>';
+        return;
+      }
+
+      // Get followers of first few people you follow
+      const suggestions: any[] = [];
+      for (const follow of following.data.follows.slice(0, 3)) {
+        try {
+          const theirFollowers = await agent.getFollowers({ actor: follow.did, limit: 5 });
+          suggestions.push(...theirFollowers.data.followers);
+        } catch {
+          continue;
+        }
+      }
+
+      // Dedupe and exclude self
+      const seen = new Set([agent.session.did]);
+      const uniqueSuggestions = suggestions.filter(s => {
+        if (seen.has(s.did)) return false;
+        seen.add(s.did);
+        return true;
+      }).slice(0, 12);
+
+      if (uniqueSuggestions.length === 0) {
+        suggestionsContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">No suggestions yet. Keep exploring!</p>';
+        return;
+      }
+
+      suggestionsContainer.innerHTML = uniqueSuggestions.map(user => `
+        <a href="/profile/${user.handle}" class="ms-search-card">
+          <img src="${user.avatar || '/default-avatar.svg'}" alt="${user.displayName || user.handle}" class="ms-search-avatar" />
+          <span class="ms-search-name">${user.displayName || user.handle}</span>
+          <span class="ms-search-handle">@${user.handle}</span>
+        </a>
+      `).join('');
+
+    } catch (error) {
+      console.error('Failed to load suggestions:', error);
+      suggestionsContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">Could not load suggestions.</p>';
+    }
+  }
+
+  // Event listeners
+  searchBtn.addEventListener('click', () => search(searchInput.value));
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') search(searchInput.value);
+  });
+
+  init();
+</script>

@@ -1,0 +1,203 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="FAQ">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">Frequently Asked Questions</div>
+      <div class="ms-box-content">
+        <div class="faq-section">
+          <div class="ms-section-header">Account & Login</div>
+
+          <div class="faq-item">
+            <div class="faq-question">How do I create an account?</div>
+            <div class="faq-answer">
+              MySky uses the AT Protocol for authentication. You'll need a Bluesky account
+              (or any AT Protocol compatible identity). Sign up at <a href="https://bsky.app" target="_blank">bsky.app</a>
+              if you don't have one, then come back and sign in!
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Why can't I use a traditional username/password?</div>
+            <div class="faq-answer">
+              MySky is built on the AT Protocol, a decentralized social networking protocol.
+              This means your identity isn't locked to MySky - you own it! You can use the
+              same identity across any AT Protocol app, and your data travels with you.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Is MySky connected to Bluesky?</div>
+            <div class="faq-answer">
+              MySky uses the same underlying protocol as Bluesky (the AT Protocol), so you
+              sign in with your Bluesky handle. However, MySky is a separate application with
+              its own features like custom CSS profiles, Top 8 Friends, and mood indicators.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-section">
+          <div class="ms-section-header">Profiles & Customization</div>
+
+          <div class="faq-item">
+            <div class="faq-question">How do I customize my profile?</div>
+            <div class="faq-answer">
+              After signing in, click "Edit Profile" to update your About Me, interests, mood,
+              and headline. You can also add custom CSS to completely transform your profile's
+              look - just like the old days!
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">What is the Top 8?</div>
+            <div class="faq-answer">
+              Your Top 8 (or Top Friends) is a featured list of friends displayed prominently
+              on your profile. It's a callback to classic social networking! By default, Tom
+              is everyone's first friend. You can customize your Top 8 in Edit Profile → Manage Top Friends.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Can I use custom CSS?</div>
+            <div class="faq-answer">
+              Yes! MySky supports custom CSS for profile personalization. Go to Edit Profile →
+              Customize CSS to add your own styles. CSS is sanitized for security, but you can
+              change colors, fonts, backgrounds, and more.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">How do I change my profile picture?</div>
+            <div class="faq-answer">
+              Your profile picture comes from your AT Protocol profile. To change it, update
+              your avatar on Bluesky at <a href="https://bsky.app/settings" target="_blank">bsky.app/settings</a>.
+              The change will reflect on MySky automatically.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-section">
+          <div class="ms-section-header">Data & Privacy</div>
+
+          <div class="faq-item">
+            <div class="faq-question">Where is my data stored?</div>
+            <div class="faq-answer">
+              Your data is stored on your Personal Data Server (PDS), not on MySky's servers.
+              If you use Bluesky, your PDS is managed by Bluesky. You can also run your own PDS
+              for complete control. MySky just provides an interface to view and edit your data.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Can I take my data elsewhere?</div>
+            <div class="faq-answer">
+              Absolutely! That's the beauty of the AT Protocol. Your identity, posts, and
+              connections are portable. You can use them on Bluesky, other AT Protocol apps,
+              or even your own applications.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">What happens if MySky shuts down?</div>
+            <div class="faq-answer">
+              Your data remains safe on your PDS. MySky doesn't store your content - we just
+              display it. If MySky goes away, your data stays with you and can be accessed
+              through other AT Protocol clients.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-section">
+          <div class="ms-section-header">Features</div>
+
+          <div class="faq-item">
+            <div class="faq-question">How do blog posts work?</div>
+            <div class="faq-answer">
+              Blog posts are stored on your PDS using the standard.site lexicon. This means
+              your blog content is truly yours and can be accessed through compatible readers.
+              Write posts at Blog → Post New Entry.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">What are bulletins?</div>
+            <div class="faq-answer">
+              Bulletins are short announcements you can share with your friends network.
+              Think of them as a broadcast to all your connections at once - great for
+              announcements, events, or just saying hi!
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Can I add a profile song?</div>
+            <div class="faq-answer">
+              Yes! Go to Edit Profile → Profile Song to add music to your profile. Just like
+              the classic social networks, visitors to your profile can hear your favorite tune.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background: var(--ms-blue-light); border-radius: 4px;">
+          <p style="font-size: 12px; margin: 0;">
+            <strong>Still have questions?</strong> Check out the <a href="/help">Help Center</a>
+            or <a href="/contact">Contact Us</a> directly!
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .faq-section {
+    margin-bottom: 25px;
+  }
+
+  .faq-item {
+    margin: 15px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .faq-question {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--ms-navy);
+    padding: 12px 15px;
+    background: #f9f9f9;
+    cursor: pointer;
+  }
+
+  .faq-question:hover {
+    background: #f0f0f0;
+  }
+
+  .faq-answer {
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #eee;
+  }
+
+  .faq-answer a {
+    color: var(--ms-link);
+  }
+
+  .faq-answer a:hover {
+    color: var(--ms-orange);
+  }
+</style>

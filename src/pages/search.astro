@@ -1,0 +1,156 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+
+if (sessionCookie) {
+  try {
+    user = JSON.parse(sessionCookie.value);
+  } catch {
+    // Invalid cookie
+  }
+}
+
+const query = Astro.url.searchParams.get('q') || '';
+---
+
+<Layout title="Search">
+  <TopNav user={user} />
+
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">MySky Search</div>
+      <div class="ms-box-content">
+        <form id="search-form" style="margin-bottom: 0;">
+          <div style="display: flex; gap: 10px;">
+            <input
+              type="text"
+              id="search-input"
+              name="q"
+              class="ms-form-input"
+              placeholder="Search MySky..."
+              value={query}
+              style="flex: 1; font-size: 14px; padding: 10px;"
+            />
+            <button type="submit" class="ms-form-submit" style="padding: 10px 25px;">
+              Search
+            </button>
+          </div>
+
+          <div style="margin-top: 15px; display: flex; gap: 20px;">
+            <label class="ms-text-small">
+              <input type="radio" name="type" value="people" checked /> People
+            </label>
+            <label class="ms-text-small">
+              <input type="radio" name="type" value="music" /> Music
+            </label>
+            <label class="ms-text-small">
+              <input type="radio" name="type" value="blogs" /> Blogs
+            </label>
+            <label class="ms-text-small">
+              <input type="radio" name="type" value="groups" /> Groups
+            </label>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {query && (
+      <div class="ms-box">
+        <div class="ms-box-header ms-box-header-blue">
+          Search Results for "{query}"
+        </div>
+        <div id="results" class="ms-search-results">
+          <div class="ms-loading" style="grid-column: 1 / -1;">
+            <div class="ms-spinner"></div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!query && (
+      <div class="ms-box">
+        <div class="ms-box-header ms-box-header-blue">Popular Searches</div>
+        <div class="ms-box-content">
+          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <a href="/search?q=music" class="ms-action-btn">Music</a>
+            <a href="/search?q=photography" class="ms-action-btn">Photography</a>
+            <a href="/search?q=art" class="ms-action-btn">Art</a>
+            <a href="/search?q=gaming" class="ms-action-btn">Gaming</a>
+            <a href="/search?q=films" class="ms-action-btn">Films</a>
+            <a href="/search?q=comedy" class="ms-action-btn">Comedy</a>
+            <a href="/search?q=tech" class="ms-action-btn">Technology</a>
+            <a href="/search?q=fashion" class="ms-action-btn">Fashion</a>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <Footer />
+</Layout>
+
+<script define:vars={{ query }}>
+  window.__SEARCH_QUERY__ = query;
+</script>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../lib/auth';
+  import { searchUsers } from '../lib/atproto';
+
+  const query = (window as any).__SEARCH_QUERY__;
+
+  async function performSearch() {
+    if (!query) return;
+
+    const resultsContainer = document.getElementById('results');
+    if (!resultsContainer) return;
+
+    try {
+      const session = await getSession();
+      let agent: Agent;
+
+      if (session) {
+        agent = new Agent(session);
+      } else {
+        agent = new Agent({ service: 'https://public.api.bsky.app' });
+      }
+
+      const results = await searchUsers(agent, query, 30);
+
+      if (results.length === 0) {
+        resultsContainer.innerHTML = `
+          <p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+            No results found for "${query}". Try a different search term.
+          </p>
+        `;
+        return;
+      }
+
+      resultsContainer.innerHTML = results.map(user => `
+        <a href="/profile/${user.handle}" class="ms-search-card">
+          <img src="${user.avatar || '/default-avatar.svg'}" alt="${user.displayName || user.handle}" class="ms-search-avatar" />
+          <span class="ms-search-name">${user.displayName || user.handle}</span>
+          <span class="ms-search-handle">@${user.handle}</span>
+          ${user.description ? `<p class="ms-text-small ms-text-gray" style="margin-top: 5px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${user.description}</p>` : ''}
+        </a>
+      `).join('');
+
+    } catch (error) {
+      console.error('Search failed:', error);
+      resultsContainer.innerHTML = `
+        <p class="ms-text-gray" style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+          Search failed. Please try again.
+        </p>
+      `;
+    }
+  }
+
+  if (query) {
+    performSearch();
+  }
+</script>

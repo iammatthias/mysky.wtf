@@ -1,0 +1,366 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TopNav from '../../components/TopNav.astro';
+import Footer from '../../components/Footer.astro';
+
+const { handle } = Astro.params;
+
+// Get current user from session
+const sessionCookie = Astro.cookies.get('ms_session');
+let currentUser = null;
+
+if (sessionCookie) {
+  try {
+    currentUser = JSON.parse(sessionCookie.value);
+  } catch {
+    // Invalid cookie
+  }
+}
+
+const isOwnProfile = currentUser?.handle === handle;
+---
+
+<Layout title={`${handle}'s Profile`}>
+  <TopNav user={currentUser} />
+
+  <div class="ms-container">
+    <div class="ms-profile" id="profile-container">
+      <!-- Left Column -->
+      <div class="ms-profile-left">
+        <!-- Profile Header -->
+        <div class="ms-box">
+          <div class="ms-box-content ms-profile-header">
+            <div id="profile-loading" class="ms-loading">
+              <div class="ms-spinner"></div>
+            </div>
+            <div id="profile-header" style="display: none;">
+              <h1 class="ms-profile-name" id="display-name"></h1>
+              <p class="ms-profile-tagline" id="headline"></p>
+              <img id="avatar" src="/default-avatar.svg" alt="Profile" class="ms-profile-pic" />
+              <p class="ms-profile-status">
+                <span class="ms-online-indicator online"></span>
+                <span id="handle-display">@{handle}</span>
+              </p>
+              <div class="ms-mood" id="mood-display" style="display: none;">
+                <span class="ms-mood-label">Mood:</span> <span id="mood-text"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Box -->
+        <div class="ms-box">
+          <div class="ms-box-header">Contacting <span id="contact-name">{handle}</span></div>
+          <div class="ms-actions">
+            {isOwnProfile ? (
+              <>
+                <a href="/edit" class="ms-action-btn ms-action-btn-primary">Edit Profile</a>
+                <a href="/edit/photos" class="ms-action-btn">Edit Photos</a>
+                <a href="/edit/css" class="ms-action-btn">Edit CSS</a>
+              </>
+            ) : (
+              <>
+                <button class="ms-action-btn ms-action-btn-primary" id="add-friend-btn">Add to Friends</button>
+                <a href="#comments" class="ms-action-btn">Send Message</a>
+                <button class="ms-action-btn" id="block-btn">Block User</button>
+                <button class="ms-action-btn">Add to Favorites</button>
+              </>
+            )}
+          </div>
+        </div>
+
+        <!-- URL Box -->
+        <div class="ms-box">
+          <div class="ms-box-header ms-box-header-blue">MySky URL</div>
+          <div class="ms-box-content">
+            <p class="ms-text-small" style="word-break: break-all;">
+              <a href={`/profile/${handle}`} id="profile-url">mysky.com/profile/{handle}</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Song Player -->
+        <div class="ms-player" id="player" style="display: none;">
+          <div class="ms-player-title">NOW PLAYING</div>
+          <div class="ms-player-song" id="song-title">Loading...</div>
+          <div class="ms-player-controls">
+            <button class="ms-player-btn">◀◀</button>
+            <button class="ms-player-btn" id="play-btn">▶</button>
+            <button class="ms-player-btn">▶▶</button>
+          </div>
+        </div>
+
+        <!-- Ad Space -->
+        <div class="ms-ad">
+          <div class="ms-ad-label">ADVERTISEMENT</div>
+          <p>🎵 Discover NEW MUSIC on MySky!</p>
+          <p class="ms-text-small">Unsigned artists - click here</p>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="ms-profile-right">
+        <!-- About Me -->
+        <div class="ms-box">
+          <div class="ms-section-header">About Me</div>
+          <div class="ms-box-content" id="about-me">
+            <p class="ms-text-gray ms-text-small">No about me set.</p>
+          </div>
+        </div>
+
+        <!-- Who I'd Like to Meet -->
+        <div class="ms-box">
+          <div class="ms-section-header">Who I'd Like to Meet</div>
+          <div class="ms-box-content" id="who-meet">
+            <p class="ms-text-gray ms-text-small">Not specified.</p>
+          </div>
+        </div>
+
+        <!-- Interests -->
+        <div class="ms-box">
+          <div class="ms-box-header ms-box-header-blue"><span id="interests-name">{handle}</span>'s Interests</div>
+          <div class="ms-box-content">
+            <table class="ms-interests">
+              <tr>
+                <th>General</th>
+                <td id="interest-general">-</td>
+              </tr>
+              <tr>
+                <th>Music</th>
+                <td id="interest-music">-</td>
+              </tr>
+              <tr>
+                <th>Movies</th>
+                <td id="interest-movies">-</td>
+              </tr>
+              <tr>
+                <th>Television</th>
+                <td id="interest-television">-</td>
+              </tr>
+              <tr>
+                <th>Books</th>
+                <td id="interest-books">-</td>
+              </tr>
+              <tr>
+                <th>Heroes</th>
+                <td id="interest-heroes">-</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Friends -->
+        <div class="ms-box">
+          <div class="ms-box-header"><span id="friends-name">{handle}</span>'s Friend Space</div>
+          <div class="ms-box-content">
+            <p class="ms-text-small ms-text-gray" style="margin-bottom: 8px;">
+              <span id="friend-count">0</span> Friends
+            </p>
+            <div class="ms-top-friends" id="top-friends">
+              <p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1;">Loading friends...</p>
+            </div>
+            <p class="ms-text-center ms-mt-10">
+              <a href={`/profile/${handle}/friends`} class="ms-text-small">View All Friends</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Blog Entries -->
+        <div class="ms-box">
+          <div class="ms-box-header"><span id="blog-name">{handle}</span>'s Latest Blog Entries</div>
+          <div class="ms-box-content" id="blog-entries">
+            <p class="ms-text-gray ms-text-small">Loading blog entries...</p>
+          </div>
+          <div style="padding: 8px; text-align: right; border-top: 1px solid #ccc;">
+            <a href={`/profile/${handle}/blog`} class="ms-text-small">View More Blog Entries</a>
+          </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="ms-box" id="comments">
+          <div class="ms-box-header"><span id="comments-name">{handle}</span>'s Comments</div>
+          <div class="ms-box-content">
+            {currentUser && (
+              <form id="comment-form" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #ccc;">
+                <p class="ms-text-small ms-text-navy" style="margin-bottom: 5px; font-weight: bold;">Leave a Comment:</p>
+                <textarea
+                  id="comment-text"
+                  class="ms-form-textarea"
+                  placeholder="Thanks for the add! 💕"
+                  style="min-height: 60px;"
+                ></textarea>
+                <button type="submit" class="ms-form-submit" style="margin-top: 5px;">Post Comment</button>
+              </form>
+            )}
+            <div class="ms-comments" id="comments-list">
+              <p class="ms-text-gray ms-text-small">Loading comments...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
+
+<script define:vars={{ handle, isOwnProfile }}>
+  window.__PROFILE_HANDLE__ = handle;
+  window.__IS_OWN_PROFILE__ = isOwnProfile;
+</script>
+
+<script>
+  import { Agent } from '@atproto/api';
+  import { getSession } from '../../lib/auth';
+  import { getMySpaceProfile, getTopFriends, getBlogEntries, getProfiles } from '../../lib/atproto';
+
+  const handle = (window as any).__PROFILE_HANDLE__;
+
+  async function loadProfile() {
+    try {
+      const session = await getSession();
+      let agent: Agent;
+
+      if (session) {
+        agent = new Agent(session);
+      } else {
+        // Public agent for viewing profiles without auth
+        agent = new Agent({ service: 'https://public.api.bsky.app' });
+      }
+
+      // Resolve handle to DID
+      const resolved = await agent.resolveHandle({ handle });
+      const did = resolved.data.did;
+
+      // Fetch base profile
+      const profileResponse = await agent.getProfile({ actor: did });
+      const profile = profileResponse.data;
+
+      // Update UI with base profile
+      document.getElementById('profile-loading')!.style.display = 'none';
+      document.getElementById('profile-header')!.style.display = 'block';
+
+      document.getElementById('display-name')!.textContent = profile.displayName || handle;
+      document.getElementById('avatar')!.setAttribute('src', profile.avatar || '/default-avatar.svg');
+      document.getElementById('handle-display')!.textContent = `@${profile.handle}`;
+
+      // Update all name references
+      ['contact-name', 'interests-name', 'friends-name', 'blog-name', 'comments-name'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = profile.displayName || handle;
+      });
+
+      // Set description as about me if exists
+      if (profile.description) {
+        document.getElementById('about-me')!.innerHTML = `<p style="font-size: 11px; line-height: 1.6;">${profile.description.replace(/\n/g, '<br>')}</p>`;
+      }
+
+      // Try to fetch MySky-specific profile data
+      if (session) {
+        try {
+          const msProfile = await getMySpaceProfile(agent, did);
+          if (msProfile) {
+            if (msProfile.headline) {
+              document.getElementById('headline')!.textContent = msProfile.headline;
+            }
+            if (msProfile.mood) {
+              document.getElementById('mood-display')!.style.display = 'block';
+              document.getElementById('mood-text')!.textContent = msProfile.mood;
+            }
+            if (msProfile.aboutMe) {
+              document.getElementById('about-me')!.innerHTML = `<p style="font-size: 11px; line-height: 1.6;">${msProfile.aboutMe.replace(/\n/g, '<br>')}</p>`;
+            }
+            if (msProfile.whoIdLikeToMeet) {
+              document.getElementById('who-meet')!.innerHTML = `<p style="font-size: 11px; line-height: 1.6;">${msProfile.whoIdLikeToMeet.replace(/\n/g, '<br>')}</p>`;
+            }
+            if (msProfile.interests) {
+              const interests = msProfile.interests;
+              if (interests.general) document.getElementById('interest-general')!.textContent = interests.general;
+              if (interests.music) document.getElementById('interest-music')!.textContent = interests.music;
+              if (interests.movies) document.getElementById('interest-movies')!.textContent = interests.movies;
+              if (interests.television) document.getElementById('interest-television')!.textContent = interests.television;
+              if (interests.books) document.getElementById('interest-books')!.textContent = interests.books;
+              if (interests.heroes) document.getElementById('interest-heroes')!.textContent = interests.heroes;
+            }
+            if (msProfile.songUrl) {
+              document.getElementById('player')!.style.display = 'block';
+              document.getElementById('song-title')!.textContent = 'Profile Song';
+            }
+          }
+        } catch (e) {
+          console.log('No MySky profile extension found');
+        }
+
+        // Load top friends
+        try {
+          const friendDids = await getTopFriends(agent, did);
+          if (friendDids.length > 0) {
+            const friendProfiles = await getProfiles(agent, friendDids);
+            document.getElementById('friend-count')!.textContent = friendDids.length.toString();
+
+            const friendsContainer = document.getElementById('top-friends')!;
+            friendsContainer.innerHTML = friendProfiles.map(friend => `
+              <a href="/profile/${friend.handle}" class="ms-friend-card">
+                <img src="${friend.avatar || '/default-avatar.svg'}" alt="${friend.displayName || friend.handle}" class="ms-friend-pic" />
+                <span class="ms-friend-name">${friend.displayName || friend.handle}</span>
+              </a>
+            `).join('');
+          } else {
+            document.getElementById('top-friends')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1;">No friends yet. Be the first!</p>';
+          }
+        } catch (e) {
+          document.getElementById('top-friends')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1;">No friends yet.</p>';
+        }
+
+        // Load blog entries
+        try {
+          const blogEntries = await getBlogEntries(agent, did, 3);
+          if (blogEntries.length > 0) {
+            document.getElementById('blog-entries')!.innerHTML = blogEntries.map(entry => `
+              <div class="ms-blog-entry">
+                <h3 class="ms-blog-title">${entry.title}</h3>
+                <p class="ms-blog-meta">Posted: ${new Date(entry.createdAt).toLocaleDateString()}</p>
+                <div class="ms-blog-content">${entry.content.substring(0, 200)}${entry.content.length > 200 ? '...' : ''}</div>
+              </div>
+            `).join('');
+          } else {
+            document.getElementById('blog-entries')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="padding: 10px;">No blog entries yet.</p>';
+          }
+        } catch (e) {
+          document.getElementById('blog-entries')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="padding: 10px;">No blog entries yet.</p>';
+        }
+      } else {
+        // Not logged in - show limited info
+        document.getElementById('top-friends')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1;"><a href="/login">Sign in</a> to see friends.</p>';
+        document.getElementById('blog-entries')!.innerHTML = '<p class="ms-text-gray ms-text-small" style="padding: 10px;"><a href="/login">Sign in</a> to see blog entries.</p>';
+      }
+
+      // Comments placeholder
+      document.getElementById('comments-list')!.innerHTML = '<p class="ms-text-gray ms-text-small">No comments yet. Be the first to leave one!</p>';
+
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      document.getElementById('profile-loading')!.innerHTML = `
+        <p class="ms-text-gray">Profile not found or error loading.</p>
+        <p class="ms-text-small"><a href="/">Return to home</a></p>
+      `;
+    }
+  }
+
+  loadProfile();
+
+  // Comment form handler
+  const commentForm = document.getElementById('comment-form');
+  if (commentForm) {
+    commentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const textarea = document.getElementById('comment-text') as HTMLTextAreaElement;
+      const content = textarea.value.trim();
+      if (!content) return;
+
+      // TODO: Implement comment posting via AT Protocol
+      alert('Comment posting coming soon! Thanks for the add! 💕');
+      textarea.value = '';
+    });
+  }
+</script>

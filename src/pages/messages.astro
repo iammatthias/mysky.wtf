@@ -1,0 +1,105 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+
+// Redirect to login if not authenticated
+if (!user) {
+  return Astro.redirect('/login?redirect=/messages');
+}
+---
+
+<Layout title="Messages">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-profile-grid">
+      <div class="ms-profile-left">
+        <div class="ms-box">
+          <div class="ms-box-header">My Mail</div>
+          <div class="ms-box-content">
+            <div style="text-align: center; padding: 10px;">
+              <img src={user.avatar || '/default-avatar.png'} alt="Profile" style="width: 100px; height: 100px; border-radius: 4px; border: 2px solid var(--ms-navy);" />
+              <p style="font-size: 12px; margin-top: 10px; color: var(--ms-navy);">
+                <strong>{user.displayName || user.handle}</strong>
+              </p>
+            </div>
+            <ul style="font-size: 12px; list-style: none; padding: 0; margin: 15px 0;">
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/messages" style="color: var(--ms-orange);">📬 Inbox</a>
+              </li>
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/messages?folder=sent">📤 Sent</a>
+              </li>
+              <li style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <a href="/messages?folder=saved">⭐ Saved</a>
+              </li>
+              <li style="padding: 5px 0;">
+                <a href="/messages?folder=trash">🗑️ Trash</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-profile-right">
+        <div class="ms-box">
+          <div class="ms-box-header">Inbox</div>
+          <div class="ms-box-content">
+            <div style="text-align: center; padding: 40px 20px;">
+              <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+              <h3 style="color: var(--ms-navy); margin-bottom: 10px;">Coming Soon!</h3>
+              <p style="font-size: 12px; color: #666;">
+                MySky Messages will use the AT Protocol's direct messaging features.
+                This feature is currently in development.
+              </p>
+              <p style="font-size: 12px; color: #666; margin-top: 15px;">
+                In the meantime, you can connect with friends through comments on profiles
+                and blog posts!
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="ms-box" style="margin-top: 15px;">
+          <div class="ms-box-header">Friend Updates</div>
+          <div class="ms-box-content">
+            <p style="font-size: 12px; color: #666; padding: 15px; text-align: center;">
+              Once messaging is live, you'll see friend activity here!
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .ms-profile-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 15px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .ms-profile-left {
+    min-width: 0;
+  }
+
+  .ms-profile-right {
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    .ms-profile-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

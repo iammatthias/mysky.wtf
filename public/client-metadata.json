@@ -1,0 +1,15 @@
+{
+  "client_id": "https://mysky.wtf/client-metadata.json",
+  "client_name": "MySky",
+  "client_uri": "https://mysky.wtf",
+  "logo_uri": "https://mysky.wtf/logo.png",
+  "tos_uri": "https://mysky.wtf/terms",
+  "policy_uri": "https://mysky.wtf/privacy",
+  "redirect_uris": ["https://mysky.wtf/oauth/callback"],
+  "scope": "atproto transition:generic",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}

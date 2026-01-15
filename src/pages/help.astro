@@ -1,0 +1,63 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopNav from '../components/TopNav.astro';
+import Footer from '../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+---
+
+<Layout title="Help">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box">
+      <div class="ms-box-header">MySky Help Center</div>
+      <div class="ms-box-content">
+        <h2 style="color: var(--ms-navy); margin-bottom: 15px;">Getting Started</h2>
+
+        <div class="ms-section-header">How do I sign in?</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          MySky uses the AT Protocol for authentication. You can sign in with any Bluesky-compatible handle
+          (like yourname.bsky.social or a custom domain). No password is stored on MySky - authentication
+          happens securely through OAuth.
+        </p>
+
+        <div class="ms-section-header">How do I customize my profile?</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          After signing in, click "Edit Profile" to update your About Me, interests, mood, and more.
+          You can also add custom CSS to completely personalize your profile's look!
+        </p>
+
+        <div class="ms-section-header">What are Top Friends?</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          Your Top 8 Friends appear prominently on your profile. By default, Tom is your first friend
+          (just like the original MySpace!). You can customize this list in Edit Profile → Manage Top Friends.
+        </p>
+
+        <div class="ms-section-header">How do I write a blog post?</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          Go to Blog → Post New Entry. Your blog posts are stored on your AT Protocol PDS, meaning
+          you own your content and can take it anywhere.
+        </p>
+
+        <div class="ms-section-header">What is the AT Protocol?</div>
+        <p style="font-size: 12px; margin: 10px 0;">
+          The AT Protocol is a decentralized social networking protocol. Your data lives on your
+          Personal Data Server (PDS), not on MySky's servers. This means you truly own your identity,
+          posts, and connections.
+        </p>
+
+        <div style="margin-top: 20px; padding: 15px; background: var(--ms-blue-light); border-radius: 4px;">
+          <p style="font-size: 12px; margin: 0;">
+            <strong>Need more help?</strong> Visit our <a href="/contact">Contact page</a> or
+            check out the <a href="https://atproto.com" target="_blank">AT Protocol documentation</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>

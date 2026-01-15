@@ -1,0 +1,111 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Login">
+    <div class="ms-login-page">
+        <h1 class="ms-login-logo">My<span>Sky</span></h1>
+        <p class="ms-login-tagline">a place for friends</p>
+
+        <div class="ms-login-box">
+            <h2 class="ms-login-title">Member Login</h2>
+
+            <div id="error-message" class="ms-login-error ms-hidden"></div>
+
+            <form class="ms-form" id="login-form">
+                <div class="ms-form-group">
+                    <label class="ms-form-label" for="handle"
+                        >Bluesky Handle:</label
+                    >
+                    <input
+                        type="text"
+                        id="handle"
+                        name="handle"
+                        class="ms-form-input"
+                        placeholder="yourname.bsky.social"
+                        required
+                    />
+                    <p
+                        class="ms-text-small ms-text-gray"
+                        style="margin-top: 4px;"
+                    >
+                        Enter your Bluesky handle (e.g., alice.bsky.social)
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    class="ms-form-submit"
+                    style="width: 100%;"
+                    id="submit-btn"
+                >
+                    Sign In with AT Protocol
+                </button>
+            </form>
+
+            <div class="ms-login-footer">
+                <p style="margin-bottom: 10px;">
+                    <a href="/">← Back to Home</a>
+                </p>
+                <p>Don't have a Bluesky account?</p>
+                <p>
+                    <a href="https://bsky.app" target="_blank"
+                        >Sign up at bsky.app</a>
+                </p>
+            </div>
+        </div>
+
+        <div style="max-width: 400px; margin-top: 20px;">
+            <div class="ms-box">
+                <div class="ms-box-header ms-box-header-blue">
+                    Why AT Protocol?
+                </div>
+                <div class="ms-box-content">
+                    <ul
+                        style="font-size: 11px; line-height: 1.6; margin-left: 15px;"
+                    >
+                        <li>Your data stays with you</li>
+                        <li>No passwords stored on MySky</li>
+                        <li>Secure OAuth authentication</li>
+                        <li>Take your profile anywhere</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</Layout>
+
+<script>
+    import { login } from "../lib/auth";
+
+    const form = document.getElementById("login-form") as HTMLFormElement;
+    const errorDiv = document.getElementById("error-message") as HTMLDivElement;
+    const submitBtn = document.getElementById(
+        "submit-btn",
+    ) as HTMLButtonElement;
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const handleInput = document.getElementById(
+            "handle",
+        ) as HTMLInputElement;
+        const handle = handleInput.value.trim();
+
+        if (!handle) return;
+
+        errorDiv.classList.add("ms-hidden");
+        submitBtn.textContent = "Signing in...";
+        submitBtn.disabled = true;
+
+        try {
+            await login(handle);
+        } catch (error) {
+            console.error("Login failed:", error);
+            errorDiv.textContent =
+                "Login failed. Please check your handle and try again.";
+            errorDiv.classList.remove("ms-hidden");
+            submitBtn.textContent = "Sign In with AT Protocol";
+            submitBtn.disabled = false;
+        }
+    });
+</script>

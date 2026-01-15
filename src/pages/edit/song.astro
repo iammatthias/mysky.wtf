@@ -1,0 +1,276 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TopNav from '../../components/TopNav.astro';
+import Footer from '../../components/Footer.astro';
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let user = null;
+if (sessionCookie) {
+  try { user = JSON.parse(sessionCookie.value); } catch {}
+}
+
+// Redirect to login if not authenticated
+if (!user) {
+  return Astro.redirect('/login?redirect=/edit/song');
+}
+---
+
+<Layout title="Profile Song">
+  <TopNav user={user} />
+  <div class="ms-container">
+    <div class="ms-box" style="max-width: 800px; margin: 0 auto;">
+      <div class="ms-box-header">Profile Song</div>
+      <div class="ms-box-content">
+        <div class="edit-nav">
+          <a href="/edit">Profile</a>
+          <a href="/edit/photos">Photos</a>
+          <a href="/edit/song" class="active">Profile Song</a>
+          <a href="/edit/interests">Interests</a>
+          <a href="/edit/friends">Top Friends</a>
+          <a href="/edit/css">Custom CSS</a>
+        </div>
+
+        <div class="song-hero">
+          <div class="music-icon">🎵</div>
+          <h2>Set Your Profile Song</h2>
+          <p>Let visitors know what you're vibing to!</p>
+        </div>
+
+        <div class="song-form">
+          <h3 style="color: var(--ms-navy); margin-bottom: 15px;">Current Song</h3>
+
+          <div class="current-song-display">
+            <div class="song-placeholder">
+              <span class="play-icon">▶</span>
+              <div class="song-info">
+                <span class="song-title">No song selected</span>
+                <span class="song-artist">Add a song to your profile!</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="color: var(--ms-navy); margin: 25px 0 15px;">Add New Song</h3>
+
+          <div class="form-group">
+            <label for="songTitle">Song Title</label>
+            <input type="text" id="songTitle" placeholder="e.g., Toxic" disabled />
+          </div>
+
+          <div class="form-group">
+            <label for="songArtist">Artist</label>
+            <input type="text" id="songArtist" placeholder="e.g., Britney Spears" disabled />
+          </div>
+
+          <div class="form-group">
+            <label for="songUrl">Song URL (optional)</label>
+            <input type="url" id="songUrl" placeholder="Link to song on Spotify, YouTube, etc." disabled />
+            <span class="form-hint">Note: Audio autoplay is disabled for visitor experience</span>
+          </div>
+
+          <div class="song-notice">
+            <strong>Coming Soon!</strong>
+            <p>
+              Profile songs are in development. You'll be able to showcase your current favorite
+              track on your profile, just like the original MySpace!
+            </p>
+            <p style="font-size: 11px; color: #666; margin-top: 10px;">
+              Song data will be stored on your AT Protocol PDS.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a href="/edit" class="ms-button-secondary">← Back to Edit Profile</a>
+          <button type="button" class="ms-button" disabled style="opacity: 0.5; cursor: not-allowed;">
+            Save Song
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<style>
+  .edit-nav {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 10px;
+    background: var(--ms-blue-light);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+
+  .edit-nav a {
+    padding: 6px 12px;
+    font-size: 11px;
+    text-decoration: none;
+    color: var(--ms-navy);
+    background: white;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+
+  .edit-nav a:hover {
+    background: #f0f0f0;
+  }
+
+  .edit-nav a.active {
+    background: var(--ms-orange);
+    color: white;
+    border-color: #d45500;
+  }
+
+  .song-hero {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(135deg, var(--ms-navy) 0%, #1a4d80 100%);
+    border-radius: 4px;
+    color: white;
+    margin-bottom: 25px;
+  }
+
+  .music-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+  }
+
+  .song-hero h2 {
+    margin: 0 0 5px;
+    font-size: 20px;
+  }
+
+  .song-hero p {
+    margin: 0;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+
+  .current-song-display {
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    padding: 15px;
+  }
+
+  .song-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .play-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--ms-navy);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    opacity: 0.5;
+  }
+
+  .song-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .song-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--ms-navy);
+  }
+
+  .song-artist {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--ms-navy);
+    margin-bottom: 5px;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 10px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+
+  .form-group input:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .form-hint {
+    display: block;
+    font-size: 10px;
+    color: #999;
+    margin-top: 5px;
+  }
+
+  .song-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 20px;
+  }
+
+  .song-notice strong {
+    display: block;
+    color: #856404;
+    margin-bottom: 8px;
+  }
+
+  .song-notice p {
+    font-size: 12px;
+    color: #856404;
+    margin: 0;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+    cursor: pointer;
+  }
+
+  .ms-button-secondary {
+    display: inline-block;
+    padding: 8px 20px;
+    background: white;
+    color: var(--ms-navy);
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+  }
+</style>
