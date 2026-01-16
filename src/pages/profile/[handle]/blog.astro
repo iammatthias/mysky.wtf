@@ -1,420 +1,512 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import TopNav from '../../../components/TopNav.astro';
-import Footer from '../../../components/Footer.astro';
+import Layout from "../../../layouts/Layout.astro";
+import TopNav from "../../../components/TopNav.astro";
+import Footer from "../../../components/Footer.astro";
 
 const { handle } = Astro.params;
 
 // Get current user from session
-const sessionCookie = Astro.cookies.get('ms_session');
+const sessionCookie = Astro.cookies.get("ms_session");
 let currentUser = null;
 
 if (sessionCookie) {
-  try {
-    currentUser = JSON.parse(sessionCookie.value);
-  } catch {}
+    try {
+        currentUser = JSON.parse(sessionCookie.value);
+    } catch {}
 }
 
 const isOwnProfile = currentUser?.handle === handle;
 ---
 
 <Layout title={`${handle}'s Blog`}>
-  <TopNav user={currentUser} />
+    <TopNav user={currentUser} />
 
-  <div class="ms-container">
-    <div class="blog-layout">
-      <!-- Sidebar -->
-      <div class="blog-sidebar">
-        <div class="ms-box">
-          <div class="ms-box-header">Blog Owner</div>
-          <div class="ms-box-content" style="text-align: center;">
-            <img id="owner-avatar" src="/default-avatar.svg" alt="Profile" class="owner-avatar" />
-            <p class="owner-name" id="owner-name">{handle}</p>
-            <p class="owner-handle">@{handle}</p>
-            <a href={`/profile/${handle}`} class="view-profile-link">View Full Profile</a>
-          </div>
-        </div>
+    <div class="ms-container">
+        <div class="blog-layout">
+            <!-- Sidebar -->
+            <div class="blog-sidebar">
+                <div class="ms-box">
+                    <div class="ms-box-header">Blog Owner</div>
+                    <div class="ms-box-content" style="text-align: center;">
+                        <img
+                            id="owner-avatar"
+                            src="/default-avatar.svg"
+                            alt="Profile"
+                            class="owner-avatar"
+                        />
+                        <p class="owner-name" id="owner-name">{handle}</p>
+                        <p class="owner-handle">@{handle}</p>
+                        <a href={`/profile/${handle}`} class="view-profile-link"
+                            >View Full Profile</a
+                        >
+                    </div>
+                </div>
 
-        <div class="ms-box" style="margin-top: 15px;">
-          <div class="ms-box-header">Blog Stats</div>
-          <div class="ms-box-content">
-            <ul class="blog-stats">
-              <li><strong id="post-count">0</strong> Posts</li>
-              <li><strong>0</strong> Comments</li>
-              <li><strong>0</strong> Views</li>
-            </ul>
-          </div>
-        </div>
+                <div class="ms-box" style="margin-top: 15px;">
+                    <div class="ms-box-header">Blog Stats</div>
+                    <div class="ms-box-content">
+                        <ul class="blog-stats">
+                            <li><strong id="post-count">0</strong> Posts</li>
+                            <li><strong>0</strong> Comments</li>
+                            <li><strong>0</strong> Views</li>
+                        </ul>
+                    </div>
+                </div>
 
-        {isOwnProfile && (
-          <div class="ms-box" style="margin-top: 15px;">
-            <div class="ms-box-header">Blog Actions</div>
-            <div class="ms-box-content">
-              <a href="/blog/new" class="ms-button" style="width: 100%; text-align: center; display: block; box-sizing: border-box;">
-                + New Blog Post
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <!-- Main Content -->
-      <div class="blog-main">
-        <div class="ms-box">
-          <div class="ms-box-header">
-            <span id="blog-title">{handle}'s Blog</span>
-          </div>
-          <div class="ms-box-content">
-            <div class="blog-nav">
-              <a href={`/profile/${handle}`} class="back-link">← Back to Profile</a>
-              <div class="blog-filters">
-                <select id="sort-by" class="blog-filter">
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                </select>
-              </div>
-            </div>
-
-            <div id="loading" class="loading-state">
-              <div class="ms-spinner"></div>
-              <p>Loading blog entries...</p>
-            </div>
-
-            <div id="blog-entries" style="display: none;">
-              <!-- Blog entries will be populated here -->
-            </div>
-
-            <div id="no-posts" class="empty-state" style="display: none;">
-              <div class="empty-icon">📝</div>
-              <h3>No Blog Posts Yet</h3>
-              <p>
-                {isOwnProfile
-                  ? "You haven't written any blog posts yet. Share your thoughts with the world!"
-                  : `${handle} hasn't posted any blog entries yet.`
+                {
+                    isOwnProfile && (
+                        <div class="ms-box" style="margin-top: 15px;">
+                            <div class="ms-box-header">Blog Actions</div>
+                            <div class="ms-box-content">
+                                <a
+                                    href="/blog/new"
+                                    class="ms-button"
+                                    style="width: 100%; text-align: center; display: block; box-sizing: border-box;"
+                                >
+                                    + New Blog Post
+                                </a>
+                            </div>
+                        </div>
+                    )
                 }
-              </p>
-              {isOwnProfile && (
-                <a href="/blog/new" class="ms-button">Write Your First Post</a>
-              )}
             </div>
 
-            <div id="error" class="error-state" style="display: none;">
-              <p>Failed to load blog entries. Please try again later.</p>
+            <!-- Main Content -->
+            <div class="blog-main">
+                <div class="ms-box">
+                    <div class="ms-box-header">
+                        <span id="blog-title">{handle}'s Blog</span>
+                    </div>
+                    <div class="ms-box-content">
+                        <div class="blog-nav">
+                            <a href={`/profile/${handle}`} class="back-link"
+                                >← Back to Profile</a
+                            >
+                            <div class="blog-filters">
+                                <select id="sort-by" class="blog-filter">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="loading" class="loading-state">
+                            <div class="ms-spinner"></div>
+                            <p>Loading blog entries...</p>
+                        </div>
+
+                        <div id="blog-entries" style="display: none;">
+                            <!-- Blog entries will be populated here -->
+                        </div>
+
+                        <div
+                            id="no-posts"
+                            class="empty-state"
+                            style="display: none;"
+                        >
+                            <div class="empty-icon">📝</div>
+                            <h3>No Blog Posts Yet</h3>
+                            <p>
+                                {
+                                    isOwnProfile
+                                        ? "You haven't written any blog posts yet. Share your thoughts with the world!"
+                                        : `${handle} hasn't posted any blog entries yet.`
+                                }
+                            </p>
+                            {
+                                isOwnProfile && (
+                                    <a href="/blog/new" class="ms-button">
+                                        Write Your First Post
+                                    </a>
+                                )
+                            }
+                        </div>
+
+                        <div
+                            id="error"
+                            class="error-state"
+                            style="display: none;"
+                        >
+                            <p>
+                                Failed to load blog entries. Please try again
+                                later.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <Footer />
+    <Footer />
 </Layout>
 
 <script define:vars={{ handle }}>
-  window.__PROFILE_HANDLE__ = handle;
+    window.__PROFILE_HANDLE__ = handle;
 </script>
 
 <script>
-  import { Agent } from '@atproto/api';
-  import { getSession } from '../../../lib/auth';
-  import { getBlogEntries } from '../../../lib/atproto';
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../../lib/auth";
+    import { getBlogEntries, getRkeyFromUri } from "../../../lib/atproto";
 
-  const handle = (window as any).__PROFILE_HANDLE__;
+    const handle = (window as any).__PROFILE_HANDLE__;
 
-  async function loadBlog() {
-    const loadingEl = document.getElementById('loading')!;
-    const entriesEl = document.getElementById('blog-entries')!;
-    const noPostsEl = document.getElementById('no-posts')!;
-    const errorEl = document.getElementById('error')!;
+    async function loadBlog() {
+        const loadingEl = document.getElementById("loading")!;
+        const entriesEl = document.getElementById("blog-entries")!;
+        const noPostsEl = document.getElementById("no-posts")!;
+        const errorEl = document.getElementById("error")!;
 
-    try {
-      const session = await getSession();
-      let agent: Agent;
+        try {
+            const session = await getSession();
+            let agent: Agent;
 
-      if (session) {
-        agent = new Agent(session);
-      } else {
-        agent = new Agent({ service: 'https://public.api.bsky.app' });
-      }
+            if (session) {
+                agent = new Agent(session);
+            } else {
+                agent = new Agent({ service: "https://public.api.bsky.app" });
+            }
 
-      // Resolve handle to DID
-      const resolved = await agent.resolveHandle({ handle });
-      const did = resolved.data.did;
+            // Resolve handle to DID
+            const resolved = await agent.resolveHandle({ handle });
+            const did = resolved.data.did;
 
-      // Fetch profile
-      const profileResponse = await agent.getProfile({ actor: did });
-      const profile = profileResponse.data;
+            // Fetch profile
+            const profileResponse = await agent.getProfile({ actor: did });
+            const profile = profileResponse.data;
 
-      // Update sidebar
-      document.getElementById('owner-avatar')!.setAttribute('src', profile.avatar || '/default-avatar.svg');
-      document.getElementById('owner-name')!.textContent = profile.displayName || handle;
-      document.getElementById('blog-title')!.textContent = `${profile.displayName || handle}'s Blog`;
+            // Update sidebar
+            document
+                .getElementById("owner-avatar")!
+                .setAttribute("src", profile.avatar || "/default-avatar.svg");
+            document.getElementById("owner-name")!.textContent =
+                profile.displayName || handle;
+            document.getElementById("blog-title")!.textContent =
+                `${profile.displayName || handle}'s Blog`;
 
-      // Fetch blog entries
-      if (session) {
-        const entries = await getBlogEntries(agent, did, 50);
+            // Fetch blog entries
+            if (session) {
+                const entries = await getBlogEntries(agent, did, 50);
 
-        document.getElementById('post-count')!.textContent = entries.length.toString();
+                document.getElementById("post-count")!.textContent =
+                    entries.length.toString();
 
-        if (entries.length === 0) {
-          loadingEl.style.display = 'none';
-          noPostsEl.style.display = 'block';
-          return;
-        }
+                if (entries.length === 0) {
+                    loadingEl.style.display = "none";
+                    noPostsEl.style.display = "block";
+                    return;
+                }
 
-        // Render blog entries
-        entriesEl.innerHTML = entries.map(entry => `
+                // Filter out drafts for non-owners
+                const visibleEntries = entries.filter((entry) => {
+                    if (entry.visibility === "draft") {
+                        return session?.did === did;
+                    }
+                    return true;
+                });
+
+                // Render blog entries
+                entriesEl.innerHTML = visibleEntries
+                    .map((entry) => {
+                        const rkey = entry.uri ? getRkeyFromUri(entry.uri) : "";
+                        const entryUrl = rkey
+                            ? `/profile/${handle}/blog/${rkey}`
+                            : "#";
+                        return `
           <article class="blog-entry">
-            <h2 class="entry-title">${escapeHtml(entry.title)}</h2>
+            <h2 class="entry-title">
+              <a href="${entryUrl}">${escapeHtml(entry.title)}</a>
+            </h2>
             <div class="entry-meta">
-              Posted on ${new Date(entry.createdAt).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              Posted on ${new Date(entry.createdAt).toLocaleDateString(
+                  "en-US",
+                  {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                  },
+              )}
+              ${entry.visibility === "friends" ? '<span class="visibility-badge">Friends Only</span>' : ""}
             </div>
             <div class="entry-content">
-              ${formatContent(entry.content)}
+              ${formatContent(entry.content.substring(0, 500))}${entry.content.length > 500 ? "..." : ""}
             </div>
             <div class="entry-footer">
-              <span class="entry-comments">💬 0 Comments</span>
-              <span class="entry-views">👁️ 0 Views</span>
+              <a href="${entryUrl}" class="read-more">Read More →</a>
             </div>
           </article>
-        `).join('');
+        `;
+                    })
+                    .join("");
 
-        loadingEl.style.display = 'none';
-        entriesEl.style.display = 'block';
-      } else {
-        loadingEl.style.display = 'none';
-        entriesEl.innerHTML = '<p class="sign-in-prompt"><a href="/login">Sign in</a> to view blog entries.</p>';
-        entriesEl.style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Failed to load blog:', error);
-      loadingEl.style.display = 'none';
-      errorEl.style.display = 'block';
+                loadingEl.style.display = "none";
+                entriesEl.style.display = "block";
+            } else {
+                loadingEl.style.display = "none";
+                entriesEl.innerHTML =
+                    '<p class="sign-in-prompt"><a href="/login">Sign in</a> to view blog entries.</p>';
+                entriesEl.style.display = "block";
+            }
+        } catch (error) {
+            console.error("Failed to load blog:", error);
+            loadingEl.style.display = "none";
+            errorEl.style.display = "block";
+        }
     }
-  }
 
-  function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+    function escapeHtml(text: string): string {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-  function formatContent(content: string): string {
-    // Escape HTML first, then convert newlines to paragraphs
-    const escaped = escapeHtml(content);
-    const paragraphs = escaped.split(/\n\n+/);
-    return paragraphs.map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
-  }
+    function formatContent(content: string): string {
+        // Escape HTML first, then convert newlines to paragraphs
+        const escaped = escapeHtml(content);
+        const paragraphs = escaped.split(/\n\n+/);
+        return paragraphs
+            .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+            .join("");
+    }
 
-  loadBlog();
+    loadBlog();
 </script>
 
 <style>
-  .blog-layout {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 15px;
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .blog-sidebar {
-    min-width: 0;
-  }
-
-  .blog-main {
-    min-width: 0;
-  }
-
-  .owner-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 4px;
-    object-fit: cover;
-    border: 2px solid var(--ms-navy);
-  }
-
-  .owner-name {
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--ms-navy);
-    margin: 10px 0 2px;
-  }
-
-  .owner-handle {
-    font-size: 11px;
-    color: #666;
-    margin: 0 0 10px;
-  }
-
-  .view-profile-link {
-    font-size: 11px;
-    color: var(--ms-orange);
-  }
-
-  .blog-stats {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    font-size: 12px;
-  }
-
-  .blog-stats li {
-    padding: 5px 0;
-    border-bottom: 1px dotted #ddd;
-  }
-
-  .blog-stats li:last-child {
-    border-bottom: none;
-  }
-
-  .blog-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .back-link {
-    font-size: 12px;
-    color: var(--ms-navy);
-  }
-
-  .blog-filter {
-    padding: 5px 10px;
-    font-size: 11px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-  }
-
-  .loading-state {
-    text-align: center;
-    padding: 40px 20px;
-  }
-
-  .loading-state p {
-    font-size: 12px;
-    color: #666;
-    margin-top: 15px;
-  }
-
-  .ms-spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid var(--ms-blue-light);
-    border-top-color: var(--ms-navy);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .blog-entry {
-    padding: 20px 0;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .blog-entry:last-child {
-    border-bottom: none;
-  }
-
-  .entry-title {
-    font-size: 18px;
-    color: var(--ms-navy);
-    margin: 0 0 8px;
-  }
-
-  .entry-meta {
-    font-size: 11px;
-    color: #666;
-    margin-bottom: 15px;
-  }
-
-  .entry-content {
-    font-size: 12px;
-    line-height: 1.7;
-    color: #333;
-  }
-
-  .entry-content p {
-    margin: 0 0 12px;
-  }
-
-  .entry-content p:last-child {
-    margin-bottom: 0;
-  }
-
-  .entry-footer {
-    display: flex;
-    gap: 20px;
-    margin-top: 15px;
-    padding-top: 10px;
-    border-top: 1px dotted #ddd;
-    font-size: 11px;
-    color: #666;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-  }
-
-  .empty-icon {
-    font-size: 48px;
-    margin-bottom: 15px;
-  }
-
-  .empty-state h3 {
-    color: var(--ms-navy);
-    margin-bottom: 10px;
-  }
-
-  .empty-state p {
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 20px;
-  }
-
-  .error-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #dc3545;
-  }
-
-  .sign-in-prompt {
-    text-align: center;
-    padding: 40px;
-    font-size: 14px;
-  }
-
-  .ms-button {
-    display: inline-block;
-    padding: 8px 20px;
-    background: var(--ms-orange);
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 12px;
-    border: 1px solid #d45500;
-  }
-
-  @media (max-width: 768px) {
     .blog-layout {
-      grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 15px;
+        max-width: 900px;
+        margin: 0 auto;
     }
 
     .blog-sidebar {
-      display: none;
+        min-width: 0;
     }
-  }
+
+    .blog-main {
+        min-width: 0;
+    }
+
+    .owner-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 4px;
+        object-fit: cover;
+        border: 2px solid var(--ms-navy);
+    }
+
+    .owner-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        margin: 10px 0 2px;
+    }
+
+    .owner-handle {
+        font-size: 11px;
+        color: #666;
+        margin: 0 0 10px;
+    }
+
+    .view-profile-link {
+        font-size: 11px;
+        color: var(--ms-orange);
+    }
+
+    .blog-stats {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        font-size: 12px;
+    }
+
+    .blog-stats li {
+        padding: 5px 0;
+        border-bottom: 1px dotted #ddd;
+    }
+
+    .blog-stats li:last-child {
+        border-bottom: none;
+    }
+
+    .blog-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .back-link {
+        font-size: 12px;
+        color: var(--ms-navy);
+    }
+
+    .blog-filter {
+        padding: 5px 10px;
+        font-size: 11px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .loading-state p {
+        font-size: 12px;
+        color: #666;
+        margin-top: 15px;
+    }
+
+    .ms-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid var(--ms-blue-light);
+        border-top-color: var(--ms-navy);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .blog-entry {
+        padding: 20px 0;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .blog-entry:last-child {
+        border-bottom: none;
+    }
+
+    .entry-title {
+        font-size: 18px;
+        color: var(--ms-navy);
+        margin: 0 0 8px;
+    }
+
+    .entry-title a {
+        color: var(--ms-navy);
+        text-decoration: none;
+    }
+
+    .entry-title a:hover {
+        color: var(--ms-link);
+        text-decoration: underline;
+    }
+
+    .entry-meta {
+        font-size: 11px;
+        color: #666;
+        margin-bottom: 15px;
+    }
+
+    .visibility-badge {
+        display: inline-block;
+        margin-left: 10px;
+        padding: 2px 8px;
+        background: #fff3cd;
+        color: #856404;
+        border-radius: 10px;
+        font-size: 10px;
+    }
+
+    .read-more {
+        color: var(--ms-orange);
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    .read-more:hover {
+        text-decoration: underline;
+    }
+
+    .entry-content {
+        font-size: 12px;
+        line-height: 1.7;
+        color: #333;
+    }
+
+    .entry-content p {
+        margin: 0 0 12px;
+    }
+
+    .entry-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .entry-footer {
+        display: flex;
+        gap: 20px;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px dotted #ddd;
+        font-size: 11px;
+        color: #666;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+
+    .empty-state h3 {
+        color: var(--ms-navy);
+        margin-bottom: 10px;
+    }
+
+    .empty-state p {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .error-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #dc3545;
+    }
+
+    .sign-in-prompt {
+        text-align: center;
+        padding: 40px;
+        font-size: 14px;
+    }
+
+    .ms-button {
+        display: inline-block;
+        padding: 8px 20px;
+        background: var(--ms-orange);
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #d45500;
+    }
+
+    @media (max-width: 768px) {
+        .blog-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .blog-sidebar {
+            display: none;
+        }
+    }
 </style>

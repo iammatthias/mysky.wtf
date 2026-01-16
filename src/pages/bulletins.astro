@@ -19,8 +19,8 @@ if (!user) {
 <Layout title="Bulletins">
     <TopNav user={user} />
     <div class="ms-container">
-        <div class="ms-profile">
-            <div class="ms-profile-left">
+        <div class="bulletins-layout">
+            <div class="bulletins-sidebar">
                 <div class="ms-box">
                     <div class="ms-box-header">Bulletin Board</div>
                     <div class="ms-actions">
@@ -55,7 +55,7 @@ if (!user) {
                 </div>
             </div>
 
-            <div class="ms-profile-right">
+            <div class="bulletins-main">
                 <div class="ms-box" id="post-form-box" style="display: none;">
                     <div class="ms-box-header">Post a Bulletin</div>
                     <div class="ms-box-content">
@@ -128,9 +128,25 @@ if (!user) {
     <Footer />
 </Layout>
 
-<style>
+<style is:global>
+    .bulletins-layout {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 15px;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .bulletins-sidebar {
+        min-width: 0;
+    }
+
+    .bulletins-main {
+        min-width: 0;
+    }
+
     .bulletin-item {
-        padding: 15px;
+        padding: 12px;
         border-bottom: 1px solid #eee;
     }
 
@@ -138,11 +154,15 @@ if (!user) {
         border-bottom: none;
     }
 
+    .bulletin-item:hover {
+        background: #fafafa;
+    }
+
     .bulletin-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     .bulletin-author {
@@ -152,8 +172,8 @@ if (!user) {
     }
 
     .bulletin-avatar {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 4px;
         object-fit: cover;
         border: 1px solid #ddd;
@@ -184,49 +204,104 @@ if (!user) {
         color: #999;
     }
 
+    .bulletin-new {
+        font-size: 9px;
+        background: var(--ms-orange);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+
     .bulletin-subject {
         font-size: 13px;
         font-weight: bold;
         color: var(--ms-navy);
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
     .bulletin-body {
         font-size: 12px;
-        line-height: 1.6;
+        line-height: 1.5;
         color: #444;
+        max-height: 100px;
+        overflow: hidden;
+        position: relative;
     }
 
-    .bulletin-actions {
-        margin-top: 10px;
-        display: flex;
-        gap: 15px;
+    .bulletin-body.expanded {
+        max-height: none;
     }
 
-    .bulletin-actions a {
+    .bulletin-body.truncated::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30px;
+        background: linear-gradient(transparent, white);
+    }
+
+    .bulletin-expand {
         font-size: 11px;
         color: var(--ms-link);
-        text-decoration: none;
+        cursor: pointer;
+        margin-top: 5px;
+        display: none;
     }
 
-    .bulletin-actions a:hover {
+    .bulletin-expand:hover {
         color: var(--ms-orange);
+    }
+
+    .bulletin-body.truncated + .bulletin-expand {
+        display: inline-block;
     }
 
     .empty-bulletins {
         text-align: center;
-        padding: 40px 20px;
+        padding: 30px 20px;
     }
 
     .empty-bulletins-icon {
-        font-size: 48px;
-        margin-bottom: 15px;
+        font-size: 36px;
+        margin-bottom: 10px;
     }
 
     .empty-bulletins p {
         font-size: 12px;
         color: #666;
         margin: 5px 0;
+    }
+
+    .ms-contact-table {
+        width: 100%;
+        font-size: 11px;
+    }
+
+    .ms-contact-table td {
+        padding: 4px 0;
+    }
+
+    .ms-contact-table td:first-child {
+        color: #666;
+        width: 60px;
+    }
+
+    .ms-contact-table td:last-child {
+        font-weight: bold;
+        color: var(--ms-navy);
+    }
+
+    @media (max-width: 768px) {
+        .bulletins-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .bulletins-sidebar {
+            display: none;
+        }
     }
 </style>
 
@@ -257,29 +332,82 @@ if (!user) {
         formBox!.style.display = "none";
     });
 
+    // Escape HTML to prevent XSS
+    function escapeHtml(text: string): string {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Check if bulletin is new (less than 24 hours old)
+    function isNew(createdAt: string): boolean {
+        const created = new Date(createdAt).getTime();
+        const now = Date.now();
+        return now - created < 24 * 60 * 60 * 1000;
+    }
+
     // Render a bulletin item
-    function renderBulletin(bulletin: any, author?: any) {
+    function renderBulletin(bulletin: any, author?: any, index?: number) {
         const authorName = author?.displayName || author?.handle || "Unknown";
         const authorHandle = author?.handle || "";
         const avatar = author?.avatar || "/default-avatar.svg";
+        const newBadge = isNew(bulletin.createdAt)
+            ? '<span class="bulletin-new">NEW</span>'
+            : "";
+        const bulletinId = `bulletin-${index || Math.random().toString(36).substring(7)}`;
 
         return `
       <div class="bulletin-item">
         <div class="bulletin-header">
           <div class="bulletin-author">
-            <img src="${avatar}" alt="${authorName}" class="bulletin-avatar" />
+            <img src="${escapeHtml(avatar)}" alt="${escapeHtml(authorName)}" class="bulletin-avatar" />
             <div class="bulletin-author-info">
               <span class="bulletin-author-name">
-                <a href="/profile/${authorHandle}">${authorName}</a>
+                <a href="/profile/${escapeHtml(authorHandle)}">${escapeHtml(authorName)}</a>
               </span>
               <span class="bulletin-time">${new Date(bulletin.createdAt).toLocaleString()}</span>
             </div>
           </div>
+          ${newBadge}
         </div>
-        <div class="bulletin-subject">${bulletin.subject}</div>
-        <div class="bulletin-body">${bulletin.body.replace(/\n/g, "<br>")}</div>
+        <div class="bulletin-subject">${escapeHtml(bulletin.subject)}</div>
+        <div class="bulletin-body" id="${bulletinId}">${escapeHtml(bulletin.body).replace(/\n/g, "<br>")}</div>
+        <span class="bulletin-expand" data-target="${bulletinId}">Read more...</span>
       </div>
     `;
+    }
+
+    // Setup expand/collapse handlers
+    function setupExpandHandlers() {
+        document.querySelectorAll(".bulletin-body").forEach((body) => {
+            const el = body as HTMLElement;
+            // Check if content is truncated
+            if (el.scrollHeight > el.clientHeight + 10) {
+                el.classList.add("truncated");
+            }
+        });
+
+        document.querySelectorAll(".bulletin-expand").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const targetId = (btn as HTMLElement).dataset.target;
+                if (targetId) {
+                    const body = document.getElementById(targetId);
+                    if (body) {
+                        body.classList.toggle("expanded");
+                        body.classList.remove("truncated");
+                        (btn as HTMLElement).textContent =
+                            body.classList.contains("expanded")
+                                ? "Show less"
+                                : "Read more...";
+                        if (!body.classList.contains("expanded")) {
+                            if (body.scrollHeight > body.clientHeight + 10) {
+                                body.classList.add("truncated");
+                            }
+                        }
+                    }
+                }
+            });
+        });
     }
 
     async function loadBulletins() {
@@ -290,15 +418,25 @@ if (!user) {
         }
 
         const agent = new Agent(session);
+        const userDid =
+            agent.did || (session as any).did || (session as any).sub;
+        console.log(
+            "Bulletins - userDid:",
+            userDid,
+            "agent.did:",
+            agent.did,
+            "session:",
+            session,
+        );
 
         try {
             // Load my bulletins
-            const myBulletins = await getBulletins(agent, session.did, 20);
+            const myBulletins = await getBulletins(agent, userDid, 20);
             postedCount.textContent = myBulletins.length.toString();
 
             if (myBulletins.length === 0) {
                 myBulletinsList.innerHTML = `
-          <p class="ms-text-gray ms-text-small" style="padding: 10px;">
+          <p class="ms-text-gray ms-text-small" style="padding: 15px; text-align: center;">
             You haven't posted any bulletins yet.
           </p>
         `;
@@ -310,14 +448,15 @@ if (!user) {
                         new Date(a.createdAt).getTime(),
                 );
 
-                const profile = await agent.getProfile({ actor: session.did });
+                const profile = await agent.getProfile({ actor: userDid });
                 myBulletinsList.innerHTML = myBulletins
-                    .map((b) => renderBulletin(b, profile.data))
+                    .slice(0, 5)
+                    .map((b, i) => renderBulletin(b, profile.data, i + 1000))
                     .join("");
             }
 
             // Load friends' bulletins
-            const friendDids = await getTopFriends(agent, session.did);
+            const friendDids = await getTopFriends(agent, userDid);
             friendsCount.textContent = friendDids.length.toString();
 
             if (friendDids.length === 0) {
@@ -325,11 +464,12 @@ if (!user) {
           <div class="empty-bulletins">
             <div class="empty-bulletins-icon">📋</div>
             <p>No friends yet!</p>
-            <p style="font-size: 11px; color: #999; margin-top: 10px;">
+            <p style="font-size: 11px; color: #999;">
               Add friends to see their bulletins here.
             </p>
           </div>
         `;
+                setupExpandHandlers();
                 return;
             }
 
@@ -357,11 +497,12 @@ if (!user) {
           <div class="empty-bulletins">
             <div class="empty-bulletins-icon">📋</div>
             <p>No bulletins from your friends yet!</p>
-            <p style="font-size: 11px; color: #999; margin-top: 10px;">
+            <p style="font-size: 11px; color: #999;">
               Bulletins from people in your Top Friends will appear here.
             </p>
           </div>
         `;
+                setupExpandHandlers();
                 return;
             }
 
@@ -374,21 +515,25 @@ if (!user) {
 
             bulletinsList.innerHTML = allFriendBulletins
                 .slice(0, 20)
-                .map(({ bulletin, author }) => renderBulletin(bulletin, author))
+                .map(({ bulletin, author }, i) =>
+                    renderBulletin(bulletin, author, i),
+                )
                 .join("");
+
+            setupExpandHandlers();
         } catch (error) {
             console.error("Failed to load bulletins:", error);
             bulletinsList.innerHTML = `
         <div class="empty-bulletins">
           <div class="empty-bulletins-icon">📋</div>
           <p>No bulletins from your friends yet!</p>
-          <p style="font-size: 11px; color: #999; margin-top: 10px;">
+          <p style="font-size: 11px; color: #999;">
             Bulletins from people in your Top Friends will appear here.
           </p>
         </div>
       `;
             myBulletinsList.innerHTML = `
-        <p class="ms-text-gray ms-text-small" style="padding: 10px;">
+        <p class="ms-text-gray ms-text-small" style="padding: 15px; text-align: center;">
           You haven't posted any bulletins yet.
         </p>
       `;
@@ -433,12 +578,11 @@ if (!user) {
             const agent = new Agent(session);
             await postBulletin(agent, subject, body);
 
-            alert("Bulletin posted!");
             form.reset();
             formBox!.style.display = "none";
 
             // Reload bulletins to show the new one
-            loadBulletins();
+            await loadBulletins();
         } catch (error) {
             console.error("Failed to post bulletin:", error);
             alert("Failed to post bulletin. Please try again.");

@@ -33,13 +33,35 @@ export async function login(handle: string): Promise<void> {
 }
 
 export async function getSession() {
-  const client = await getOAuthClient();
-  const result = await client.init();
+  try {
+    const client = await getOAuthClient();
+    const result = await client.init();
 
-  if (result?.session) {
-    return result.session;
+    if (result?.session) {
+      return result.session;
+    }
+    return null;
+  } catch (error) {
+    // Handle expired/invalid refresh tokens by clearing the session
+    if (error instanceof Error && error.message.includes("refresh token")) {
+      console.warn("Session expired, clearing invalid session");
+      // Clear any stored session data
+      try {
+        const client = await getOAuthClient();
+        // Try to get the DID from localStorage to revoke
+        const storedSessions = localStorage.getItem("atproto-oauth-session");
+        if (storedSessions) {
+          localStorage.removeItem("atproto-oauth-session");
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
+      // Redirect to login
+      window.location.href = "/login?expired=1";
+      return null;
+    }
+    throw error;
   }
-  return null;
 }
 
 export async function getAgent(): Promise<Agent | null> {

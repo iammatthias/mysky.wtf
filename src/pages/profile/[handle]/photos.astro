@@ -1,0 +1,728 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import TopNav from '../../../components/TopNav.astro';
+import Footer from '../../../components/Footer.astro';
+
+const { handle } = Astro.params;
+
+const sessionCookie = Astro.cookies.get('ms_session');
+let currentUser = null;
+if (sessionCookie) {
+  try { currentUser = JSON.parse(sessionCookie.value); } catch {}
+}
+
+const isOwnProfile = currentUser?.handle === handle;
+---
+
+<Layout title={`${handle}'s Photos`}>
+  <TopNav user={currentUser} />
+
+  <div class="ms-container">
+    <div class="photos-page">
+      <!-- Sidebar -->
+      <div class="photos-sidebar">
+        <div class="ms-box">
+          <div class="ms-box-header">Photo Owner</div>
+          <div class="ms-box-content" style="text-align: center;">
+            <img id="owner-avatar" src="/default-avatar.svg" alt="Profile" class="owner-avatar" />
+            <p class="owner-name" id="owner-name">{handle}</p>
+            <p class="owner-handle">@{handle}</p>
+            <a href={`/profile/${handle}`} class="view-profile-link">View Profile</a>
+          </div>
+        </div>
+
+        <div class="ms-box" style="margin-top: 15px;">
+          <div class="ms-box-header">Albums</div>
+          <div class="ms-box-content" id="albums-list">
+            <p class="ms-text-gray ms-text-small">Loading albums...</p>
+          </div>
+        </div>
+
+        {isOwnProfile && (
+          <div class="ms-box" style="margin-top: 15px;">
+            <div class="ms-actions">
+              <a href="/edit/photos" class="ms-action-btn ms-action-btn-primary">Manage Photos</a>
+            </div>
+          </div>
+        )}
+
+        <div class="ms-ad">
+          <div class="ms-ad-label">ADVERTISEMENT</div>
+          <p>Share your pics!</p>
+          <p class="ms-text-small">Upload photos today</p>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="photos-main">
+        <div class="ms-box">
+          <div class="ms-box-header">
+            <span id="page-title">{handle}'s Photos</span>
+          </div>
+          <div class="ms-box-content">
+            <div id="loading" class="loading-state">
+              <div class="ms-spinner"></div>
+              <p>Loading photos...</p>
+            </div>
+
+            <div id="album-view" style="display: none;">
+              <div class="album-header">
+                <button class="back-btn" id="back-to-albums">&larr; All Albums</button>
+                <h2 id="album-title"></h2>
+                <p id="album-description" class="album-description"></p>
+              </div>
+              <div id="album-photos" class="photos-grid"></div>
+            </div>
+
+            <div id="albums-view" style="display: none;">
+              <div id="albums-grid" class="albums-grid"></div>
+            </div>
+
+            <div id="empty-state" class="empty-state" style="display: none;">
+              <div style="font-size: 64px; margin-bottom: 20px;">📷</div>
+              <h3>No Photos Yet</h3>
+              <p>{handle} hasn't uploaded any photos yet.</p>
+              {isOwnProfile && (
+                <a href="/edit/photos" class="ms-button" style="margin-top: 15px;">Upload Photos</a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox" style="display: none;">
+    <button class="lightbox-close" id="lightbox-close">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lightbox-prev">&lt;</button>
+    <button class="lightbox-nav lightbox-next" id="lightbox-next">&gt;</button>
+    <div class="lightbox-content">
+      <img id="lightbox-image" src="" alt="" />
+      <div class="lightbox-caption" id="lightbox-caption"></div>
+      <div class="lightbox-meta" id="lightbox-meta"></div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
+
+<script define:vars={{ handle }}>
+  window.__PROFILE_HANDLE__ = handle;
+</script>
+
+<script>
+  import { Agent } from "@atproto/api";
+  import { getSession } from "../../../lib/auth";
+  import {
+    getPhotoAlbums,
+    getAlbumPhotos,
+    getAllPhotos,
+    getPhotoUrl,
+  } from "../../../lib/atproto";
+  import type { PhotoAlbumWithMeta, PhotoWithMeta } from "../../../lib/lexicons";
+
+  const handle = (window as any).__PROFILE_HANDLE__;
+
+  let agent: Agent;
+  let profileDid: string;
+  let albums: PhotoAlbumWithMeta[] = [];
+  let currentAlbum: PhotoAlbumWithMeta | null = null;
+  let currentPhotos: PhotoWithMeta[] = [];
+  let currentPhotoIndex = 0;
+
+  async function init() {
+    const session = await getSession();
+
+    if (session) {
+      agent = new Agent(session);
+    } else {
+      agent = new Agent({ service: "https://public.api.bsky.app" });
+    }
+
+    try {
+      // Resolve handle to DID
+      const resolved = await agent.resolveHandle({ handle });
+      profileDid = resolved.data.did;
+
+      // Get profile for sidebar
+      const profileResponse = await agent.getProfile({ actor: profileDid });
+      const profile = profileResponse.data;
+
+      document.getElementById("owner-avatar")!.setAttribute("src", profile.avatar || "/default-avatar.svg");
+      document.getElementById("owner-name")!.textContent = profile.displayName || handle;
+      document.getElementById("page-title")!.textContent = `${profile.displayName || handle}'s Photos`;
+
+      await loadAlbums();
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      document.getElementById("loading")!.innerHTML = `
+        <p class="ms-text-gray">Could not load photos.</p>
+        <p class="ms-text-small"><a href="/profile/${handle}">Return to profile</a></p>
+      `;
+    }
+  }
+
+  async function loadAlbums() {
+    const loading = document.getElementById("loading")!;
+    const albumsView = document.getElementById("albums-view")!;
+    const emptyState = document.getElementById("empty-state")!;
+    const albumsList = document.getElementById("albums-list")!;
+    const albumsGrid = document.getElementById("albums-grid")!;
+
+    try {
+      albums = await getPhotoAlbums(agent, profileDid);
+
+      // Filter to only public albums (unless it's the user's own profile)
+      const session = await getSession();
+      const currentDid = session?.did || agent.did;
+      const isOwner = currentDid === profileDid;
+
+      const visibleAlbums = isOwner
+        ? albums
+        : albums.filter((a) => a.value.visibility === "public");
+
+      loading.style.display = "none";
+
+      if (visibleAlbums.length === 0) {
+        emptyState.style.display = "block";
+        albumsList.innerHTML = '<p class="ms-text-gray ms-text-small">No albums yet.</p>';
+        return;
+      }
+
+      albumsView.style.display = "block";
+
+      // Sidebar album list
+      albumsList.innerHTML = visibleAlbums
+        .map((album) => `
+          <a href="#" class="album-link" data-rkey="${album.rkey}">
+            ${escapeHtml(album.value.name)}
+            ${album.value.visibility !== "public" ? `<span class="visibility-badge">${album.value.visibility}</span>` : ''}
+          </a>
+        `)
+        .join("");
+
+      // Main album grid
+      albumsGrid.innerHTML = await Promise.all(
+        visibleAlbums.map(async (album) => {
+          const photos = await getAlbumPhotos(agent, profileDid, album.rkey);
+          const coverUrl = album.value.coverPhoto
+            ? getPhotoUrl(profileDid, album.value.coverPhoto)
+            : photos.length > 0
+              ? getPhotoUrl(profileDid, photos[0].value.image)
+              : null;
+
+          return `
+            <div class="album-card" data-rkey="${album.rkey}">
+              ${coverUrl ? `<img src="${coverUrl}" class="album-cover" alt="${album.value.name}" />` : `<div class="album-placeholder">📁</div>`}
+              <div class="album-info">
+                <span class="album-name">${escapeHtml(album.value.name)}</span>
+                <span class="album-count">${photos.length} photo${photos.length !== 1 ? 's' : ''}</span>
+                ${album.value.visibility !== "public" ? `<span class="visibility-badge">${album.value.visibility}</span>` : ''}
+              </div>
+            </div>
+          `;
+        })
+      ).then((cards) => cards.join(""));
+
+      setupAlbumClickHandlers();
+    } catch (error) {
+      console.error("Failed to load albums:", error);
+      loading.innerHTML = '<p class="ms-text-gray">Could not load albums.</p>';
+    }
+  }
+
+  function setupAlbumClickHandlers() {
+    // Album cards in main grid
+    document.querySelectorAll(".album-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const rkey = (card as HTMLElement).dataset.rkey!;
+        const album = albums.find((a) => a.rkey === rkey);
+        if (album) openAlbum(album);
+      });
+    });
+
+    // Album links in sidebar
+    document.querySelectorAll(".album-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const rkey = (link as HTMLElement).dataset.rkey!;
+        const album = albums.find((a) => a.rkey === rkey);
+        if (album) openAlbum(album);
+      });
+    });
+
+    // Back button
+    document.getElementById("back-to-albums")!.addEventListener("click", () => {
+      document.getElementById("album-view")!.style.display = "none";
+      document.getElementById("albums-view")!.style.display = "block";
+      currentAlbum = null;
+      currentPhotos = [];
+    });
+
+    // Lightbox controls
+    document.getElementById("lightbox-close")!.addEventListener("click", closeLightbox);
+    document.getElementById("lightbox-prev")!.addEventListener("click", () => navigateLightbox(-1));
+    document.getElementById("lightbox-next")!.addEventListener("click", () => navigateLightbox(1));
+    document.getElementById("lightbox")!.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("lightbox")) {
+        closeLightbox();
+      }
+    });
+
+    // Keyboard navigation
+    document.addEventListener("keydown", (e) => {
+      if (document.getElementById("lightbox")!.style.display !== "none") {
+        if (e.key === "Escape") closeLightbox();
+        if (e.key === "ArrowLeft") navigateLightbox(-1);
+        if (e.key === "ArrowRight") navigateLightbox(1);
+      }
+    });
+  }
+
+  async function openAlbum(album: PhotoAlbumWithMeta) {
+    currentAlbum = album;
+
+    document.getElementById("albums-view")!.style.display = "none";
+    document.getElementById("album-view")!.style.display = "block";
+    document.getElementById("album-title")!.textContent = album.value.name;
+    document.getElementById("album-description")!.textContent = album.value.description || "";
+
+    const photosContainer = document.getElementById("album-photos")!;
+    photosContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="text-align: center; padding: 20px;">Loading photos...</p>';
+
+    try {
+      currentPhotos = await getAlbumPhotos(agent, profileDid, album.rkey);
+
+      if (currentPhotos.length === 0) {
+        photosContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="text-align: center; padding: 40px;">No photos in this album yet.</p>';
+        return;
+      }
+
+      photosContainer.innerHTML = currentPhotos
+        .map((photo, index) => `
+          <div class="photo-item" data-index="${index}">
+            <img src="${getPhotoUrl(profileDid, photo.value.image)}" alt="${photo.value.caption || 'Photo'}" />
+            ${photo.value.caption ? `<span class="photo-caption">${escapeHtml(photo.value.caption)}</span>` : ''}
+          </div>
+        `)
+        .join("");
+
+      // Add click handlers for lightbox
+      photosContainer.querySelectorAll(".photo-item").forEach((el) => {
+        el.addEventListener("click", () => {
+          const index = parseInt((el as HTMLElement).dataset.index || "0");
+          openLightbox(index);
+        });
+      });
+    } catch (error) {
+      console.error("Failed to load photos:", error);
+      photosContainer.innerHTML = '<p class="ms-text-gray ms-text-small" style="text-align: center;">Could not load photos.</p>';
+    }
+  }
+
+  function openLightbox(index: number) {
+    if (currentPhotos.length === 0) return;
+
+    currentPhotoIndex = index;
+    const photo = currentPhotos[index];
+
+    document.getElementById("lightbox-image")!.setAttribute("src", getPhotoUrl(profileDid, photo.value.image));
+    document.getElementById("lightbox-caption")!.textContent = photo.value.caption || "";
+    document.getElementById("lightbox-meta")!.textContent = new Date(photo.value.uploadedAt).toLocaleDateString();
+    document.getElementById("lightbox")!.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeLightbox() {
+    document.getElementById("lightbox")!.style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  function navigateLightbox(direction: number) {
+    if (currentPhotos.length === 0) return;
+
+    currentPhotoIndex = (currentPhotoIndex + direction + currentPhotos.length) % currentPhotos.length;
+    const photo = currentPhotos[currentPhotoIndex];
+
+    document.getElementById("lightbox-image")!.setAttribute("src", getPhotoUrl(profileDid, photo.value.image));
+    document.getElementById("lightbox-caption")!.textContent = photo.value.caption || "";
+    document.getElementById("lightbox-meta")!.textContent = new Date(photo.value.uploadedAt).toLocaleDateString();
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  init();
+</script>
+
+<style>
+  .photos-page {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 15px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .photos-sidebar {
+    min-width: 0;
+  }
+
+  .photos-main {
+    min-width: 0;
+  }
+
+  .owner-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 2px solid var(--ms-navy);
+  }
+
+  .owner-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--ms-navy);
+    margin: 10px 0 2px;
+  }
+
+  .owner-handle {
+    font-size: 11px;
+    color: #666;
+    margin: 0 0 10px;
+  }
+
+  .view-profile-link {
+    font-size: 11px;
+    color: var(--ms-orange);
+  }
+
+  .album-link {
+    display: block;
+    padding: 8px 10px;
+    color: var(--ms-link);
+    text-decoration: none;
+    font-size: 12px;
+    border-bottom: 1px dotted #ddd;
+  }
+
+  .album-link:last-child {
+    border-bottom: none;
+  }
+
+  .album-link:hover {
+    background: var(--ms-blue-light);
+  }
+
+  .visibility-badge {
+    font-size: 9px;
+    background: #f0f0f0;
+    color: #666;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .loading-state p {
+    font-size: 12px;
+    color: #666;
+    margin-top: 15px;
+  }
+
+  .ms-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid var(--ms-blue-light);
+    border-top-color: var(--ms-navy);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .empty-state h3 {
+    color: var(--ms-navy);
+    margin-bottom: 10px;
+  }
+
+  .empty-state p {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .albums-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+  }
+
+  .album-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+  }
+
+  .album-card:hover {
+    border-color: var(--ms-orange);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .album-cover {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+  }
+
+  .album-placeholder {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    font-size: 48px;
+  }
+
+  .album-info {
+    padding: 12px;
+  }
+
+  .album-name {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--ms-navy);
+    margin-bottom: 4px;
+  }
+
+  .album-count {
+    font-size: 11px;
+    color: #666;
+  }
+
+  .album-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: var(--ms-link);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 10px;
+  }
+
+  .back-btn:hover {
+    text-decoration: underline;
+  }
+
+  .album-header h2 {
+    font-size: 20px;
+    color: var(--ms-navy);
+    margin: 0 0 5px;
+  }
+
+  .album-description {
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+  }
+
+  .photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .photo-item {
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .photo-item:hover {
+    border-color: var(--ms-orange);
+    transform: scale(1.02);
+  }
+
+  .photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ms-button {
+    display: inline-block;
+    padding: 8px 20px;
+    background: var(--ms-orange);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    border: 1px solid #d45500;
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 24px;
+    padding: 20px 15px;
+    cursor: pointer;
+    z-index: 10;
+    border-radius: 4px;
+  }
+
+  .lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .lightbox-prev { left: 20px; }
+  .lightbox-next { right: 20px; }
+
+  .lightbox-content {
+    max-width: 90%;
+    max-height: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .lightbox-content img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+  }
+
+  .lightbox-caption {
+    color: white;
+    margin-top: 15px;
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .lightbox-meta {
+    color: #999;
+    font-size: 12px;
+    margin-top: 5px;
+  }
+
+  .ms-ad {
+    background: #ffffcc;
+    border: 1px solid #e6e600;
+    padding: 15px;
+    text-align: center;
+    font-size: 11px;
+    margin-top: 15px;
+  }
+
+  .ms-ad-label {
+    font-size: 9px;
+    color: #999;
+    margin-bottom: 5px;
+  }
+
+  .ms-ad p {
+    margin: 5px 0;
+    color: #333;
+  }
+
+  @media (max-width: 768px) {
+    .photos-page {
+      grid-template-columns: 1fr;
+    }
+
+    .photos-sidebar {
+      display: none;
+    }
+
+    .albums-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .photos-grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+
+    .lightbox-nav {
+      padding: 10px;
+    }
+
+    .lightbox-prev { left: 5px; }
+    .lightbox-next { right: 5px; }
+  }
+</style>

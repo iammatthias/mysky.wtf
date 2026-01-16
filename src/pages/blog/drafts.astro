@@ -193,6 +193,7 @@ if (!user) {
         updateDocument,
         deleteDocument,
         getRkeyFromUri,
+        getDocumentContent,
     } from "../../lib/atproto";
 
     async function loadDrafts() {
@@ -238,10 +239,7 @@ if (!user) {
             draftsList.innerHTML = drafts
                 .map((draft) => {
                     const rkey = getRkeyFromUri(draft.uri);
-                    const content =
-                        draft.value.content?.value ||
-                        draft.value.textContent ||
-                        "";
+                    const content = getDocumentContent(draft.value);
                     const lastEdited =
                         draft.value.updatedAt || draft.value.publishedAt;
 

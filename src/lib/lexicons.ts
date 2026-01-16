@@ -13,6 +13,8 @@ export const LEXICONS = {
   customCss: "space.myspace.customCss",
   mood: "space.myspace.mood",
   bulletin: "space.myspace.bulletin",
+  photoAlbum: "space.myspace.photoAlbum",
+  photo: "space.myspace.photo",
 } as const;
 
 // ============================================
@@ -156,6 +158,7 @@ export interface TopFriendsRecord {
 export interface CommentRecord {
   $type: "space.myspace.comment";
   targetDid: string;
+  author: string;
   content: string;
   createdAt: string;
 }
@@ -166,6 +169,43 @@ export interface BulletinRecord {
   subject: string;
   body: string;
   createdAt: string;
+}
+
+// Photo Album record
+export interface PhotoAlbumRecord {
+  $type: "space.myspace.photoAlbum";
+  name: string;
+  description?: string;
+  coverPhoto?: BlobRef;
+  visibility: "public" | "friends" | "private";
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// Photo Album with record metadata
+export interface PhotoAlbumWithMeta {
+  uri: string;
+  cid: string;
+  rkey: string;
+  value: PhotoAlbumRecord;
+}
+
+// Photo record
+export interface PhotoRecord {
+  $type: "space.myspace.photo";
+  albumRkey: string; // Reference to the album this photo belongs to
+  image: BlobRef;
+  caption?: string;
+  tags?: string[];
+  uploadedAt: string;
+}
+
+// Photo with record metadata
+export interface PhotoWithMeta {
+  uri: string;
+  cid: string;
+  rkey: string;
+  value: PhotoRecord;
 }
 
 // Legacy BlogEntry type (for backwards compatibility during migration)

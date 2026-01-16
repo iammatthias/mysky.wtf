@@ -1,224 +1,1301 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import TopNav from '../../components/TopNav.astro';
-import Footer from '../../components/Footer.astro';
+import Layout from "../../layouts/Layout.astro";
+import TopNav from "../../components/TopNav.astro";
+import Footer from "../../components/Footer.astro";
 
-const sessionCookie = Astro.cookies.get('ms_session');
+const sessionCookie = Astro.cookies.get("ms_session");
 let user = null;
 if (sessionCookie) {
-  try { user = JSON.parse(sessionCookie.value); } catch {}
+    try {
+        user = JSON.parse(sessionCookie.value);
+    } catch {}
 }
 
 // Redirect to login if not authenticated
 if (!user) {
-  return Astro.redirect('/login?redirect=/edit/photos');
+    return Astro.redirect("/login?redirect=/edit/photos");
 }
 ---
 
 <Layout title="Edit Photos">
-  <TopNav user={user} />
-  <div class="ms-container">
-    <div class="ms-box" style="max-width: 800px; margin: 0 auto;">
-      <div class="ms-box-header">My Photos</div>
-      <div class="ms-box-content">
-        <div class="edit-nav">
-          <a href="/edit">Profile</a>
-          <a href="/edit/photos" class="active">Photos</a>
-          <a href="/edit/song">Profile Song</a>
-          <a href="/edit/interests">Interests</a>
-          <a href="/edit/friends">Top Friends</a>
-          <a href="/edit/css">Custom CSS</a>
-        </div>
+    <TopNav user={user} />
+    <div class="ms-container">
+        <div class="ms-box" style="max-width: 900px; margin: 0 auto;">
+            <div class="ms-box-header">My Photos</div>
+            <div class="ms-box-content">
+                <div class="edit-nav">
+                    <a href="/edit">Profile</a>
+                    <a href="/edit/photos" class="active">Photos</a>
+                    <a href="/edit/song">Profile Song</a>
+                    <a href="/edit/interests">Interests</a>
+                    <a href="/edit/friends">Top Friends</a>
+                    <a href="/edit/css">Custom CSS</a>
+                </div>
 
-        <h3 style="color: var(--ms-navy); margin: 20px 0 15px;">Profile Picture</h3>
-        <div class="photo-upload-area">
-          <div class="current-photo">
-            <img src={user.avatar || '/default-avatar.png'} alt="Current profile photo" id="currentAvatar" />
-          </div>
-          <div class="photo-controls">
-            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
-              Your profile picture is pulled from your AT Protocol profile.
-              To change it, update your avatar on Bluesky or your PDS provider.
-            </p>
-            <a href="https://bsky.app/settings" target="_blank" class="ms-button-secondary">
-              Update on Bluesky →
-            </a>
-          </div>
-        </div>
+                <h3 style="color: var(--ms-navy); margin: 20px 0 15px;">
+                    Profile Picture
+                </h3>
+                <div class="photo-upload-area">
+                    <div class="current-photo">
+                        <img
+                            src={user.avatar || "/default-avatar.png"}
+                            alt="Current profile photo"
+                            id="currentAvatar"
+                        />
+                    </div>
+                    <div class="photo-controls">
+                        <p
+                            style="font-size: 12px; color: #666; margin-bottom: 15px;"
+                        >
+                            Your profile picture is pulled from your AT Protocol
+                            profile. To change it, update your avatar on Bluesky
+                            or your PDS provider.
+                        </p>
+                        <a
+                            href="https://bsky.app/settings"
+                            target="_blank"
+                            class="ms-button-secondary"
+                        >
+                            Update on Bluesky
+                        </a>
+                    </div>
+                </div>
 
-        <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Photo Albums</h3>
-        <div class="albums-grid">
-          <div class="album-card create-new">
-            <div class="album-icon">📁</div>
-            <span>Create Album</span>
-          </div>
-        </div>
-        <p style="font-size: 11px; color: #999; margin-top: 15px; text-align: center; font-style: italic;">
-          Photo albums coming soon! Your photos will be stored on your AT Protocol PDS.
-        </p>
+                <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">
+                    Photo Albums
+                </h3>
 
-        <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">Recent Uploads</h3>
-        <div class="photos-empty">
-          <div style="font-size: 48px; margin-bottom: 15px;">📷</div>
-          <p>No photos uploaded yet</p>
-          <p style="font-size: 11px; color: #999;">
-            Photo uploads will be available soon!
-          </p>
-        </div>
+                <!-- Create Album Form -->
+                <div
+                    class="create-album-form"
+                    id="create-album-form"
+                    style="display: none;"
+                >
+                    <h4>Create New Album</h4>
+                    <div class="form-group">
+                        <label for="album-name">Album Name</label>
+                        <input
+                            type="text"
+                            id="album-name"
+                            class="ms-form-input"
+                            placeholder="Summer Vacation 2024"
+                            required
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="album-description"
+                            >Description (optional)</label
+                        >
+                        <textarea
+                            id="album-description"
+                            class="ms-form-textarea"
+                            placeholder="Photos from my trip..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="album-visibility">Visibility</label>
+                        <select id="album-visibility" class="ms-form-select">
+                            <option value="public"
+                                >Public - Anyone can see</option
+                            >
+                            <option value="friends">Friends Only</option>
+                            <option value="private">Private - Only me</option>
+                        </select>
+                    </div>
+                    <div class="form-actions-inline">
+                        <button
+                            type="button"
+                            class="ms-button"
+                            id="save-album-btn">Create Album</button
+                        >
+                        <button
+                            type="button"
+                            class="ms-button-secondary"
+                            id="cancel-album-btn">Cancel</button
+                        >
+                    </div>
+                </div>
 
-        <div class="form-actions">
-          <a href="/edit" class="ms-button-secondary">← Back to Edit Profile</a>
-          <a href={`/profile/${user.handle}`} class="ms-button">View My Profile</a>
+                <div class="albums-grid" id="albums-grid">
+                    <div class="album-card create-new" id="create-album-card">
+                        <div class="album-icon">+</div>
+                        <span>Create Album</span>
+                    </div>
+                    <!-- Albums will be loaded here -->
+                </div>
+
+                <div
+                    id="albums-loading"
+                    class="loading-state"
+                    style="display: none;"
+                >
+                    <div class="ms-spinner"></div>
+                    <p>Loading albums...</p>
+                </div>
+
+                <h3 style="color: var(--ms-navy); margin: 30px 0 15px;">
+                    Recent Uploads
+                </h3>
+                <div id="recent-photos" class="photos-grid">
+                    <p
+                        class="ms-text-gray ms-text-small"
+                        style="grid-column: 1 / -1; text-align: center; padding: 20px;"
+                    >
+                        Loading photos...
+                    </p>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/edit" class="ms-button-secondary"
+                        >Back to Edit Profile</a
+                    >
+                    <a href={`/profile/${user.handle}/photos`} class="ms-button"
+                        >View My Photos</a
+                    >
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-  <Footer />
+
+    <!-- Album View Modal -->
+    <div id="album-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-album-name">Album Name</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">📷</div>
+                    <p>Drag & drop photos here or click to upload</p>
+                    <input
+                        type="file"
+                        id="photo-upload"
+                        multiple
+                        accept="image/*"
+                        style="display: none;"
+                    />
+                    <button class="ms-button" id="select-photos-btn"
+                        >Select Photos</button
+                    >
+                </div>
+                <div
+                    id="upload-progress"
+                    class="upload-progress"
+                    style="display: none;"
+                >
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <p id="upload-status">Uploading...</p>
+                </div>
+                <div class="album-photos" id="album-photos">
+                    <p
+                        class="ms-text-gray ms-text-small"
+                        style="text-align: center; padding: 20px;"
+                    >
+                        No photos in this album yet.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="ms-button-danger" id="delete-album-btn"
+                    >Delete Album</button
+                >
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Lightbox -->
+    <div id="lightbox" class="lightbox" style="display: none;">
+        <button class="lightbox-close" id="lightbox-close">&times;</button>
+        <button class="lightbox-nav lightbox-prev" id="lightbox-prev"
+            >&lt;</button
+        >
+        <button class="lightbox-nav lightbox-next" id="lightbox-next"
+            >&gt;</button
+        >
+        <div class="lightbox-content">
+            <img id="lightbox-image" src="" alt="" />
+            <div class="lightbox-caption" id="lightbox-caption"></div>
+        </div>
+        <div class="lightbox-actions">
+            <button class="ms-button-secondary" id="edit-caption-btn"
+                >Edit Caption</button
+            >
+            <button class="ms-button-danger" id="delete-photo-btn"
+                >Delete Photo</button
+            >
+        </div>
+    </div>
+
+    <Footer />
 </Layout>
 
-<style>
-  .edit-nav {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    padding: 10px;
-    background: var(--ms-blue-light);
-    border-radius: 4px;
-    margin-bottom: 20px;
-  }
+<script define:vars={{ userHandle: user.handle }}>
+    window.__USER_HANDLE__ = userHandle;
+</script>
 
-  .edit-nav a {
-    padding: 6px 12px;
-    font-size: 11px;
-    text-decoration: none;
-    color: var(--ms-navy);
-    background: white;
-    border-radius: 3px;
-    border: 1px solid #ccc;
-  }
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../lib/auth";
+    import {
+        getPhotoAlbums,
+        createPhotoAlbum,
+        deletePhotoAlbum,
+        getAlbumPhotos,
+        getAllPhotos,
+        uploadPhoto,
+        deletePhoto,
+        updatePhoto,
+        getPhotoUrl,
+    } from "../../lib/atproto";
+    import type { PhotoAlbumWithMeta, PhotoWithMeta } from "../../lib/lexicons";
 
-  .edit-nav a:hover {
-    background: #f0f0f0;
-  }
+    const userHandle = (window as any).__USER_HANDLE__;
 
-  .edit-nav a.active {
-    background: var(--ms-orange);
-    color: white;
-    border-color: #d45500;
-  }
+    let agent: Agent;
+    let userDid: string;
+    let albums: PhotoAlbumWithMeta[] = [];
+    let currentAlbum: PhotoAlbumWithMeta | null = null;
+    let currentAlbumPhotos: PhotoWithMeta[] = [];
+    let currentPhotoIndex = 0;
 
-  .photo-upload-area {
-    display: flex;
-    gap: 20px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-  }
+    async function init() {
+        const session = await getSession();
+        if (!session) {
+            window.location.href = "/login?redirect=/edit/photos";
+            return;
+        }
 
-  .current-photo img {
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 3px solid var(--ms-navy);
-  }
+        agent = new Agent(session);
+        userDid = agent.did || session.did;
 
-  .photo-controls {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .albums-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 15px;
-  }
-
-  .album-card {
-    aspect-ratio: 1;
-    border: 2px dashed #ccc;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: #f9f9f9;
-  }
-
-  .album-card:hover {
-    border-color: var(--ms-orange);
-    background: #fff;
-  }
-
-  .album-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
-  }
-
-  .album-card span {
-    font-size: 11px;
-    color: var(--ms-navy);
-  }
-
-  .photos-empty {
-    text-align: center;
-    padding: 40px 20px;
-    background: #f9f9f9;
-    border-radius: 4px;
-    border: 1px dashed #ccc;
-  }
-
-  .photos-empty p {
-    font-size: 12px;
-    color: #666;
-    margin: 0;
-  }
-
-  .form-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
-  }
-
-  .ms-button {
-    display: inline-block;
-    padding: 8px 20px;
-    background: var(--ms-orange);
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 12px;
-    border: 1px solid #d45500;
-  }
-
-  .ms-button-secondary {
-    display: inline-block;
-    padding: 8px 20px;
-    background: white;
-    color: var(--ms-navy);
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 12px;
-    border: 1px solid #ccc;
-  }
-
-  .ms-button:hover,
-  .ms-button-secondary:hover {
-    opacity: 0.9;
-  }
-
-  @media (max-width: 600px) {
-    .photo-upload-area {
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
+        await loadAlbums();
+        await loadRecentPhotos();
+        setupEventListeners();
     }
-  }
+
+    async function loadAlbums() {
+        const grid = document.getElementById("albums-grid")!;
+        const loading = document.getElementById("albums-loading")!;
+        const createCard = document.getElementById("create-album-card")!;
+
+        loading.style.display = "block";
+
+        try {
+            albums = await getPhotoAlbums(agent, userDid);
+
+            // Clear existing album cards (except create card)
+            const existingCards = grid.querySelectorAll(
+                ".album-card:not(.create-new)",
+            );
+            existingCards.forEach((card) => card.remove());
+
+            // Add album cards
+            albums.forEach((album) => {
+                const card = document.createElement("div");
+                card.className = "album-card";
+                card.dataset.rkey = album.rkey;
+
+                const coverUrl = album.value.coverPhoto
+                    ? getPhotoUrl(userDid, album.value.coverPhoto)
+                    : null;
+
+                card.innerHTML = `
+          ${coverUrl ? `<img src="${coverUrl}" class="album-cover" alt="${album.value.name}" />` : `<div class="album-icon">📁</div>`}
+          <span class="album-name">${escapeHtml(album.value.name)}</span>
+          <span class="album-visibility">${album.value.visibility}</span>
+        `;
+
+                card.addEventListener("click", () => openAlbum(album));
+                grid.appendChild(card);
+            });
+
+            // Move create card to the end
+            grid.appendChild(createCard);
+        } catch (error) {
+            console.error("Failed to load albums:", error);
+        } finally {
+            loading.style.display = "none";
+        }
+    }
+
+    async function loadRecentPhotos() {
+        const container = document.getElementById("recent-photos")!;
+
+        try {
+            const photos = await getAllPhotos(agent, userDid);
+
+            if (photos.length === 0) {
+                container.innerHTML = `
+          <div class="photos-empty">
+            <div style="font-size: 48px; margin-bottom: 15px;">📷</div>
+            <p>No photos uploaded yet</p>
+            <p style="font-size: 11px; color: #999;">
+              Create an album and start uploading!
+            </p>
+          </div>
+        `;
+                return;
+            }
+
+            // Sort by most recent and take first 12
+            const recentPhotos = photos
+                .sort(
+                    (a, b) =>
+                        new Date(b.value.uploadedAt).getTime() -
+                        new Date(a.value.uploadedAt).getTime(),
+                )
+                .slice(0, 12);
+
+            container.innerHTML = recentPhotos
+                .map(
+                    (photo) => `
+          <div class="photo-thumb" data-rkey="${photo.rkey}">
+            <img src="${getPhotoUrl(userDid, photo.value.image)}" alt="${photo.value.caption || "Photo"}" />
+          </div>
+        `,
+                )
+                .join("");
+        } catch (error) {
+            console.error("Failed to load recent photos:", error);
+            container.innerHTML = `<p class="ms-text-gray ms-text-small" style="grid-column: 1 / -1; text-align: center;">Could not load photos.</p>`;
+        }
+    }
+
+    function setupEventListeners() {
+        // Create album card click
+        document
+            .getElementById("create-album-card")!
+            .addEventListener("click", () => {
+                document.getElementById("create-album-form")!.style.display =
+                    "block";
+                document.getElementById("album-name")!.focus();
+            });
+
+        // Cancel create album
+        document
+            .getElementById("cancel-album-btn")!
+            .addEventListener("click", () => {
+                document.getElementById("create-album-form")!.style.display =
+                    "none";
+                (
+                    document.getElementById("album-name") as HTMLInputElement
+                ).value = "";
+                (
+                    document.getElementById(
+                        "album-description",
+                    ) as HTMLTextAreaElement
+                ).value = "";
+            });
+
+        // Save album
+        document
+            .getElementById("save-album-btn")!
+            .addEventListener("click", async () => {
+                const nameInput = document.getElementById(
+                    "album-name",
+                ) as HTMLInputElement;
+                const descInput = document.getElementById(
+                    "album-description",
+                ) as HTMLTextAreaElement;
+                const visSelect = document.getElementById(
+                    "album-visibility",
+                ) as HTMLSelectElement;
+
+                const name = nameInput.value.trim();
+                if (!name) {
+                    alert("Please enter an album name");
+                    return;
+                }
+
+                const btn = document.getElementById(
+                    "save-album-btn",
+                ) as HTMLButtonElement;
+                btn.disabled = true;
+                btn.textContent = "Creating...";
+
+                try {
+                    await createPhotoAlbum(agent, {
+                        name,
+                        description: descInput.value.trim() || undefined,
+                        visibility: visSelect.value as
+                            | "public"
+                            | "friends"
+                            | "private",
+                    });
+
+                    document.getElementById(
+                        "create-album-form",
+                    )!.style.display = "none";
+                    nameInput.value = "";
+                    descInput.value = "";
+
+                    await loadAlbums();
+                } catch (error) {
+                    console.error("Failed to create album:", error);
+                    alert("Failed to create album. Please try again.");
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = "Create Album";
+                }
+            });
+
+        // Modal close
+        document
+            .getElementById("modal-close")!
+            .addEventListener("click", closeModal);
+        document
+            .getElementById("album-modal")!
+            .addEventListener("click", (e) => {
+                if (e.target === document.getElementById("album-modal")) {
+                    closeModal();
+                }
+            });
+
+        // Photo upload
+        document
+            .getElementById("select-photos-btn")!
+            .addEventListener("click", () => {
+                document.getElementById("photo-upload")!.click();
+            });
+
+        document
+            .getElementById("photo-upload")!
+            .addEventListener("change", handlePhotoUpload);
+
+        // Drag and drop
+        const uploadZone = document.getElementById("upload-zone")!;
+        uploadZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploadZone.classList.add("drag-over");
+        });
+        uploadZone.addEventListener("dragleave", () => {
+            uploadZone.classList.remove("drag-over");
+        });
+        uploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove("drag-over");
+            const files = e.dataTransfer?.files;
+            if (files && files.length > 0) {
+                handleFiles(Array.from(files));
+            }
+        });
+
+        // Delete album
+        document
+            .getElementById("delete-album-btn")!
+            .addEventListener("click", async () => {
+                if (!currentAlbum) return;
+
+                if (
+                    !confirm(
+                        `Are you sure you want to delete "${currentAlbum.value.name}"? This will also delete all photos in the album.`,
+                    )
+                ) {
+                    return;
+                }
+
+                try {
+                    await deletePhotoAlbum(agent, currentAlbum.rkey);
+                    closeModal();
+                    await loadAlbums();
+                    await loadRecentPhotos();
+                } catch (error) {
+                    console.error("Failed to delete album:", error);
+                    alert("Failed to delete album. Please try again.");
+                }
+            });
+
+        // Lightbox
+        document
+            .getElementById("lightbox-close")!
+            .addEventListener("click", closeLightbox);
+        document
+            .getElementById("lightbox-prev")!
+            .addEventListener("click", () => navigateLightbox(-1));
+        document
+            .getElementById("lightbox-next")!
+            .addEventListener("click", () => navigateLightbox(1));
+        document.getElementById("lightbox")!.addEventListener("click", (e) => {
+            if (e.target === document.getElementById("lightbox")) {
+                closeLightbox();
+            }
+        });
+
+        // Delete photo from lightbox
+        document
+            .getElementById("delete-photo-btn")!
+            .addEventListener("click", async () => {
+                if (currentAlbumPhotos.length === 0) return;
+                const photo = currentAlbumPhotos[currentPhotoIndex];
+
+                if (!confirm("Are you sure you want to delete this photo?"))
+                    return;
+
+                try {
+                    await deletePhoto(agent, photo.rkey);
+                    closeLightbox();
+                    await loadAlbumPhotos();
+                    await loadRecentPhotos();
+                } catch (error) {
+                    console.error("Failed to delete photo:", error);
+                    alert("Failed to delete photo. Please try again.");
+                }
+            });
+
+        // Edit caption
+        document
+            .getElementById("edit-caption-btn")!
+            .addEventListener("click", async () => {
+                if (currentAlbumPhotos.length === 0) return;
+                const photo = currentAlbumPhotos[currentPhotoIndex];
+
+                const newCaption = prompt(
+                    "Enter a caption for this photo:",
+                    photo.value.caption || "",
+                );
+                if (newCaption === null) return;
+
+                try {
+                    await updatePhoto(agent, photo.rkey, {
+                        caption: newCaption,
+                    });
+                    currentAlbumPhotos[currentPhotoIndex].value.caption =
+                        newCaption;
+                    document.getElementById("lightbox-caption")!.textContent =
+                        newCaption;
+                    await loadAlbumPhotos();
+                } catch (error) {
+                    console.error("Failed to update caption:", error);
+                    alert("Failed to update caption. Please try again.");
+                }
+            });
+
+        // Keyboard navigation
+        document.addEventListener("keydown", (e) => {
+            if (document.getElementById("lightbox")!.style.display !== "none") {
+                if (e.key === "Escape") closeLightbox();
+                if (e.key === "ArrowLeft") navigateLightbox(-1);
+                if (e.key === "ArrowRight") navigateLightbox(1);
+            }
+        });
+    }
+
+    async function openAlbum(album: PhotoAlbumWithMeta) {
+        currentAlbum = album;
+        document.getElementById("modal-album-name")!.textContent =
+            album.value.name;
+        document.getElementById("album-modal")!.style.display = "flex";
+        document.body.style.overflow = "hidden";
+
+        await loadAlbumPhotos();
+    }
+
+    function closeModal() {
+        document.getElementById("album-modal")!.style.display = "none";
+        document.body.style.overflow = "";
+        currentAlbum = null;
+        currentAlbumPhotos = [];
+    }
+
+    async function loadAlbumPhotos() {
+        if (!currentAlbum) return;
+
+        const container = document.getElementById("album-photos")!;
+        container.innerHTML =
+            '<p class="ms-text-gray ms-text-small" style="text-align: center; padding: 20px;">Loading photos...</p>';
+
+        try {
+            currentAlbumPhotos = await getAlbumPhotos(
+                agent,
+                userDid,
+                currentAlbum.rkey,
+            );
+
+            if (currentAlbumPhotos.length === 0) {
+                container.innerHTML =
+                    '<p class="ms-text-gray ms-text-small" style="text-align: center; padding: 20px;">No photos in this album yet. Upload some above!</p>';
+                return;
+            }
+
+            container.innerHTML = currentAlbumPhotos
+                .map(
+                    (photo, index) => `
+          <div class="album-photo" data-index="${index}">
+            <img src="${getPhotoUrl(userDid, photo.value.image)}" alt="${photo.value.caption || "Photo"}" />
+            ${photo.value.caption ? `<span class="photo-caption">${escapeHtml(photo.value.caption)}</span>` : ""}
+          </div>
+        `,
+                )
+                .join("");
+
+            // Add click handlers for lightbox
+            container.querySelectorAll(".album-photo").forEach((el) => {
+                el.addEventListener("click", () => {
+                    const index = parseInt(
+                        (el as HTMLElement).dataset.index || "0",
+                    );
+                    openLightbox(index);
+                });
+            });
+        } catch (error) {
+            console.error("Failed to load album photos:", error);
+            container.innerHTML =
+                '<p class="ms-text-gray ms-text-small" style="text-align: center; padding: 20px;">Failed to load photos.</p>';
+        }
+    }
+
+    async function handlePhotoUpload(e: Event) {
+        const input = e.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) return;
+        handleFiles(Array.from(files));
+        input.value = "";
+    }
+
+    async function handleFiles(files: File[]) {
+        if (!currentAlbum) return;
+
+        const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+        if (imageFiles.length === 0) {
+            alert("Please select image files only.");
+            return;
+        }
+
+        const progressContainer = document.getElementById("upload-progress")!;
+        const progressFill = document.getElementById("progress-fill")!;
+        const uploadStatus = document.getElementById("upload-status")!;
+
+        progressContainer.style.display = "block";
+
+        let uploaded = 0;
+        for (const file of imageFiles) {
+            uploadStatus.textContent = `Uploading ${uploaded + 1} of ${imageFiles.length}...`;
+            progressFill.style.width = `${(uploaded / imageFiles.length) * 100}%`;
+
+            try {
+                await uploadPhoto(agent, currentAlbum.rkey, file);
+                uploaded++;
+            } catch (error) {
+                console.error("Failed to upload photo:", error);
+            }
+        }
+
+        progressFill.style.width = "100%";
+        uploadStatus.textContent = `Uploaded ${uploaded} photo${uploaded !== 1 ? "s" : ""}!`;
+
+        setTimeout(() => {
+            progressContainer.style.display = "none";
+            progressFill.style.width = "0%";
+        }, 2000);
+
+        await loadAlbumPhotos();
+        await loadRecentPhotos();
+    }
+
+    function openLightbox(index: number) {
+        if (currentAlbumPhotos.length === 0) return;
+
+        currentPhotoIndex = index;
+        const photo = currentAlbumPhotos[index];
+
+        document
+            .getElementById("lightbox-image")!
+            .setAttribute("src", getPhotoUrl(userDid, photo.value.image));
+        document.getElementById("lightbox-caption")!.textContent =
+            photo.value.caption || "";
+        document.getElementById("lightbox")!.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeLightbox() {
+        document.getElementById("lightbox")!.style.display = "none";
+        document.body.style.overflow = "hidden"; // Keep modal scroll lock
+    }
+
+    function navigateLightbox(direction: number) {
+        if (currentAlbumPhotos.length === 0) return;
+
+        currentPhotoIndex =
+            (currentPhotoIndex + direction + currentAlbumPhotos.length) %
+            currentAlbumPhotos.length;
+        const photo = currentAlbumPhotos[currentPhotoIndex];
+
+        document
+            .getElementById("lightbox-image")!
+            .setAttribute("src", getPhotoUrl(userDid, photo.value.image));
+        document.getElementById("lightbox-caption")!.textContent =
+            photo.value.caption || "";
+    }
+
+    function escapeHtml(text: string): string {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    init();
+</script>
+
+<style>
+    .edit-nav {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        padding: 10px;
+        background: var(--ms-blue-light);
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+
+    .edit-nav a {
+        padding: 6px 12px;
+        font-size: 11px;
+        text-decoration: none;
+        color: var(--ms-navy);
+        background: white;
+        border-radius: 3px;
+        border: 1px solid #ccc;
+    }
+
+    .edit-nav a:hover {
+        background: #f0f0f0;
+    }
+
+    .edit-nav a.active {
+        background: var(--ms-orange);
+        color: white;
+        border-color: #d45500;
+    }
+
+    .photo-upload-area {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px dashed #ccc;
+    }
+
+    .current-photo img {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 3px solid var(--ms-navy);
+    }
+
+    .photo-controls {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .create-album-form {
+        background: #f9f9f9;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+    }
+
+    .create-album-form h4 {
+        margin: 0 0 15px;
+        color: var(--ms-navy);
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        margin-bottom: 5px;
+    }
+
+    .ms-form-input,
+    .ms-form-textarea,
+    .ms-form-select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: inherit;
+    }
+
+    .ms-form-textarea {
+        min-height: 60px;
+        resize: vertical;
+    }
+
+    .ms-form-input:focus,
+    .ms-form-textarea:focus,
+    .ms-form-select:focus {
+        outline: none;
+        border-color: var(--ms-navy);
+    }
+
+    .form-actions-inline {
+        display: flex;
+        gap: 10px;
+    }
+
+    .albums-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+    }
+
+    .album-card {
+        aspect-ratio: 1;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #f9f9f9;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .album-card:hover {
+        border-color: var(--ms-orange);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .album-card.create-new {
+        border-style: dashed;
+    }
+
+    .album-cover {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .album-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+        z-index: 1;
+    }
+
+    .album-name {
+        font-size: 11px;
+        color: var(--ms-navy);
+        font-weight: bold;
+        text-align: center;
+        padding: 0 5px;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.9);
+        width: 100%;
+        padding: 5px;
+        position: absolute;
+        bottom: 20px;
+    }
+
+    .album-visibility {
+        font-size: 9px;
+        color: #666;
+        position: absolute;
+        bottom: 5px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 2px 6px;
+        border-radius: 3px;
+        z-index: 1;
+    }
+
+    .photos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+
+    .photo-thumb {
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .photo-thumb:hover {
+        border-color: var(--ms-orange);
+        transform: scale(1.02);
+    }
+
+    .photo-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photos-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 40px 20px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px dashed #ccc;
+    }
+
+    .photos-empty p {
+        font-size: 12px;
+        color: #666;
+        margin: 0;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .ms-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid var(--ms-blue-light);
+        border-top-color: var(--ms-navy);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+    }
+
+    .ms-button {
+        display: inline-block;
+        padding: 8px 20px;
+        background: var(--ms-orange);
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #d45500;
+        cursor: pointer;
+    }
+
+    .ms-button:hover {
+        background: #d45500;
+    }
+
+    .ms-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .ms-button-secondary {
+        display: inline-block;
+        padding: 8px 20px;
+        background: white;
+        color: var(--ms-navy);
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #ccc;
+        cursor: pointer;
+    }
+
+    .ms-button-secondary:hover {
+        background: #f0f0f0;
+    }
+
+    .ms-button-danger {
+        display: inline-block;
+        padding: 8px 20px;
+        background: #dc3545;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #c82333;
+        cursor: pointer;
+    }
+
+    .ms-button-danger:hover {
+        background: #c82333;
+    }
+
+    /* Modal styles */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #ddd;
+        background: var(--ms-blue-light);
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: var(--ms-navy);
+        font-size: 16px;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        line-height: 1;
+    }
+
+    .modal-close:hover {
+        color: #333;
+    }
+
+    .modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+    }
+
+    .upload-zone {
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: all 0.2s;
+    }
+
+    .upload-zone.drag-over {
+        border-color: var(--ms-orange);
+        background: #fff5ee;
+    }
+
+    .upload-zone p {
+        font-size: 12px;
+        color: #666;
+        margin: 10px 0;
+    }
+
+    .upload-icon {
+        font-size: 48px;
+    }
+
+    .upload-progress {
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--ms-orange);
+        width: 0%;
+        transition: width 0.3s;
+    }
+
+    .upload-progress p {
+        font-size: 12px;
+        color: #666;
+        margin: 0;
+    }
+
+    .album-photos {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .album-photo {
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 4px;
+        cursor: pointer;
+        position: relative;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+
+    .album-photo:hover {
+        border-color: var(--ms-orange);
+    }
+
+    .album-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .photo-caption {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 5px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Lightbox styles */
+    .lightbox {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .lightbox-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 32px;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .lightbox-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        font-size: 24px;
+        padding: 20px 15px;
+        cursor: pointer;
+        z-index: 10;
+    }
+
+    .lightbox-nav:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .lightbox-prev {
+        left: 20px;
+    }
+
+    .lightbox-next {
+        right: 20px;
+    }
+
+    .lightbox-content {
+        max-width: 90%;
+        max-height: 70%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .lightbox-content img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .lightbox-caption {
+        color: white;
+        margin-top: 15px;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .lightbox-actions {
+        position: absolute;
+        bottom: 30px;
+        display: flex;
+        gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+        .photo-upload-area {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .albums-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+
+        .lightbox-nav {
+            padding: 10px;
+        }
+
+        .lightbox-prev {
+            left: 5px;
+        }
+
+        .lightbox-next {
+            right: 5px;
+        }
+    }
 </style>

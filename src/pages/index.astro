@@ -55,9 +55,12 @@ if (sessionCookie) {
 
         <div class="ms-profile-right">
           <div class="ms-box">
-            <div class="ms-box-header">My Bulletins</div>
-            <div class="ms-box-content">
-              <p class="ms-text-gray ms-text-small">No new bulletins. <a href="/bulletins">Post a bulletin</a></p>
+            <div class="ms-box-header">Bulletins</div>
+            <div class="ms-box-content" id="bulletins-preview">
+              <p class="ms-text-gray ms-text-small">Loading bulletins...</p>
+            </div>
+            <div style="padding: 8px; text-align: right; border-top: 1px solid #ccc;">
+              <a href="/bulletins" class="ms-text-small">View All Bulletins</a>
             </div>
           </div>
 
@@ -139,8 +142,11 @@ if (sessionCookie) {
 </Layout>
 
 <script>
-  import { login } from '../lib/auth';
+  import { Agent } from '@atproto/api';
+  import { login, getSession } from '../lib/auth';
+  import { getTopFriends, getProfiles, getBulletins } from '../lib/atproto';
 
+  // Login form handler
   const form = document.getElementById('login-form') as HTMLFormElement;
 
   if (form) {
@@ -158,5 +164,142 @@ if (sessionCookie) {
         alert('Login failed. Please check your handle and try again.');
       }
     });
+  }
+
+  // Load friend space, bulletins, and cool new people for logged-in users
+  const friendSpace = document.getElementById('friend-space');
+  const coolPeople = document.getElementById('cool-people');
+  const bulletinsPreview = document.getElementById('bulletins-preview');
+
+  if (friendSpace || coolPeople || bulletinsPreview) {
+    async function loadHomeData() {
+      const session = await getSession();
+      if (!session) return;
+
+      const agent = new Agent(session);
+      const userDid = agent.did || (session as any).did || (session as any).sub;
+
+      // Load friend space (top friends)
+      if (friendSpace) {
+        try {
+          const topFriends = await getTopFriends(agent, userDid);
+          if (topFriends.length > 0) {
+            const profiles = await getProfiles(agent, topFriends.slice(0, 8));
+            friendSpace.innerHTML = `
+              <div class="ms-top-friends">
+                ${profiles.map(friend => `
+                  <a href="/profile/${friend.handle}" class="ms-friend-card">
+                    <img src="${friend.avatar || '/default-avatar.svg'}" alt="${friend.displayName || friend.handle}" class="ms-friend-pic" />
+                    <span class="ms-friend-name">${friend.displayName || friend.handle}</span>
+                  </a>
+                `).join('')}
+              </div>
+            `;
+          } else {
+            friendSpace.innerHTML = '<p class="ms-text-gray ms-text-small">No top friends yet. <a href="/edit/friends">Add some friends!</a></p>';
+          }
+        } catch (error) {
+          console.error('Failed to load friends:', error);
+          friendSpace.innerHTML = '<p class="ms-text-gray ms-text-small">Could not load friends.</p>';
+        }
+      }
+
+      // Load bulletins feed (yours + friends)
+      if (bulletinsPreview) {
+        try {
+          const topFriends = await getTopFriends(agent, userDid);
+          // Include yourself in the feed
+          const allDids = [userDid, ...topFriends];
+          const allProfiles = await getProfiles(agent, allDids);
+          const profileMap = new Map(allProfiles.map(p => [p?.did, p]));
+
+          const allBulletins: { bulletin: any; author: any }[] = [];
+
+          for (const did of allDids) {
+            try {
+              const bulletins = await getBulletins(agent, did, 5);
+              const author = profileMap.get(did);
+              bulletins.forEach(b => allBulletins.push({ bulletin: b, author }));
+            } catch {
+              // Skip users with no bulletins
+            }
+          }
+
+          // Sort by newest
+          allBulletins.sort((a, b) =>
+            new Date(b.bulletin.createdAt).getTime() - new Date(a.bulletin.createdAt).getTime()
+          );
+
+          if (allBulletins.length > 0) {
+            bulletinsPreview.innerHTML = allBulletins.slice(0, 5).map(({ bulletin, author }) => `
+              <div style="padding: 8px 0; border-bottom: 1px dotted #ccc;">
+                <div style="font-size: 11px; color: #666;">
+                  <a href="/profile/${author?.handle || ''}" style="font-weight: bold; color: var(--ms-link);">${author?.displayName || author?.handle || 'Unknown'}</a>
+                  <span style="color: #999;"> - ${new Date(bulletin.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div style="font-size: 12px; font-weight: bold; color: var(--ms-navy); margin: 4px 0;">${bulletin.subject}</div>
+                <div style="font-size: 11px; color: #444;">${bulletin.body.substring(0, 100)}${bulletin.body.length > 100 ? '...' : ''}</div>
+              </div>
+            `).join('');
+          } else {
+            bulletinsPreview.innerHTML = '<p class="ms-text-gray ms-text-small">No bulletins yet. <a href="/bulletins">Post one!</a></p>';
+          }
+        } catch (error) {
+          console.error('Failed to load bulletins:', error);
+          bulletinsPreview.innerHTML = '<p class="ms-text-gray ms-text-small">Could not load bulletins.</p>';
+        }
+      }
+
+      // Load cool new people (suggestions based on who you follow)
+      if (coolPeople) {
+        try {
+          const following = await agent.getFollows({ actor: userDid, limit: 5 });
+
+          if (following.data.follows.length === 0) {
+            coolPeople.innerHTML = '<p class="ms-text-gray ms-text-small">Follow some people to get suggestions! <a href="/browse">Browse users</a></p>';
+            return;
+          }
+
+          // Get followers of people you follow
+          const suggestions: any[] = [];
+          for (const follow of following.data.follows.slice(0, 3)) {
+            try {
+              const theirFollowers = await agent.getFollowers({ actor: follow.did, limit: 4 });
+              suggestions.push(...theirFollowers.data.followers);
+            } catch {
+              continue;
+            }
+          }
+
+          // Dedupe and exclude self
+          const seen = new Set([userDid]);
+          const uniqueSuggestions = suggestions.filter(s => {
+            if (seen.has(s.did)) return false;
+            seen.add(s.did);
+            return true;
+          }).slice(0, 6);
+
+          if (uniqueSuggestions.length > 0) {
+            coolPeople.innerHTML = `
+              <div class="ms-top-friends">
+                ${uniqueSuggestions.map(user => `
+                  <a href="/profile/${user.handle}" class="ms-friend-card">
+                    <img src="${user.avatar || '/default-avatar.svg'}" alt="${user.displayName || user.handle}" class="ms-friend-pic" />
+                    <span class="ms-friend-name">${user.displayName || user.handle}</span>
+                  </a>
+                `).join('')}
+              </div>
+            `;
+          } else {
+            coolPeople.innerHTML = '<p class="ms-text-gray ms-text-small">No suggestions yet. <a href="/browse">Browse users</a></p>';
+          }
+        } catch (error) {
+          console.error('Failed to load suggestions:', error);
+          coolPeople.innerHTML = '<p class="ms-text-gray ms-text-small">Could not load suggestions.</p>';
+        }
+      }
+    }
+
+    loadHomeData();
   }
 </script>

@@ -1,0 +1,830 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import TopNav from "../../../../components/TopNav.astro";
+import Footer from "../../../../components/Footer.astro";
+
+const { handle, rkey } = Astro.params;
+
+// Get current user from session
+const sessionCookie = Astro.cookies.get("ms_session");
+let currentUser = null;
+
+if (sessionCookie) {
+    try {
+        currentUser = JSON.parse(sessionCookie.value);
+    } catch {}
+}
+
+const isOwnPost = currentUser?.handle === handle;
+---
+
+<Layout title={`Blog Post - ${handle}`}>
+    <TopNav user={currentUser} />
+
+    <div class="ms-container">
+        <div class="blog-layout">
+            <!-- Sidebar -->
+            <div class="blog-sidebar">
+                <div class="ms-box">
+                    <div class="ms-box-header">Author</div>
+                    <div class="ms-box-content" style="text-align: center;">
+                        <img
+                            id="author-avatar"
+                            src="/default-avatar.svg"
+                            alt="Profile"
+                            class="author-avatar"
+                        />
+                        <p class="author-name" id="author-name">{handle}</p>
+                        <p class="author-handle">@{handle}</p>
+                        <a href={`/profile/${handle}`} class="view-profile-link"
+                            >View Profile</a
+                        >
+                    </div>
+                </div>
+
+                <div class="ms-box" style="margin-top: 15px;">
+                    <div class="ms-box-header">Navigation</div>
+                    <div class="ms-actions">
+                        <a
+                            href={`/profile/${handle}/blog`}
+                            class="ms-action-btn">All Posts</a
+                        >
+                        <a href={`/profile/${handle}`} class="ms-action-btn"
+                            >Profile</a
+                        >
+                        {
+                            isOwnPost && (
+                                <a
+                                    href={`/blog/edit/${rkey}`}
+                                    class="ms-action-btn ms-action-btn-primary"
+                                >
+                                    Edit Post
+                                </a>
+                            )
+                        }
+                    </div>
+                </div>
+
+                <div class="ms-ad">
+                    <div class="ms-ad-label">ADVERTISEMENT</div>
+                    <p>Share your thoughts!</p>
+                    <p class="ms-text-small">Start your own blog today</p>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="blog-main">
+                <div class="ms-box">
+                    <div class="ms-box-content">
+                        <div id="loading" class="loading-state">
+                            <div class="ms-spinner"></div>
+                            <p>Loading blog entry...</p>
+                        </div>
+
+                        <article id="blog-entry" style="display: none;">
+                            <h1 class="entry-title" id="entry-title"></h1>
+
+                            <div class="entry-meta" id="entry-meta"></div>
+
+                            <div
+                                id="entry-description"
+                                class="entry-description"
+                                style="display: none;"
+                            >
+                            </div>
+
+                            <div
+                                id="entry-tags"
+                                class="entry-tags"
+                                style="display: none;"
+                            >
+                            </div>
+
+                            <div class="entry-content" id="entry-content"></div>
+
+                            <div class="entry-footer">
+                                <span class="entry-comments" id="comment-count"
+                                    >0 Comments</span
+                                >
+                                <span
+                                    class="entry-visibility"
+                                    id="entry-visibility"></span>
+                            </div>
+                        </article>
+
+                        <!-- Comments Section -->
+                        <div
+                            id="comments-section"
+                            class="comments-section"
+                            style="display: none;"
+                        >
+                            <h3 class="comments-header">Comments</h3>
+
+                            <div
+                                id="comment-form-container"
+                                class="comment-form-container"
+                                style="display: none;"
+                            >
+                                <form id="comment-form" class="comment-form">
+                                    <textarea
+                                        id="comment-text"
+                                        class="comment-textarea"
+                                        placeholder="Leave a comment..."
+                                        rows="3"
+                                        required></textarea>
+                                    <button
+                                        type="submit"
+                                        class="comment-submit"
+                                        id="comment-submit">Post Comment</button
+                                    >
+                                </form>
+                            </div>
+
+                            <div
+                                id="login-to-comment"
+                                class="login-prompt"
+                                style="display: none;"
+                            >
+                                <a href="/login">Sign in</a> to leave a comment.
+                            </div>
+
+                            <div id="comments-list" class="comments-list">
+                                <p class="ms-text-gray ms-text-small">
+                                    Loading comments...
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            id="not-found"
+                            class="error-state"
+                            style="display: none;"
+                        >
+                            <h3>Post Not Found</h3>
+                            <p>
+                                This blog post doesn't exist or has been
+                                removed.
+                            </p>
+                            <a
+                                href={`/profile/${handle}/blog`}
+                                class="ms-button">View All Posts</a
+                            >
+                        </div>
+
+                        <div
+                            id="error"
+                            class="error-state"
+                            style="display: none;"
+                        >
+                            <p>
+                                Failed to load blog entry. Please try again
+                                later.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <Footer />
+</Layout>
+
+<script define:vars={{ handle, rkey }}>
+    window.__PROFILE_HANDLE__ = handle;
+    window.__POST_RKEY__ = rkey;
+</script>
+
+<script>
+    import { Agent } from "@atproto/api";
+    import { getSession } from "../../../../lib/auth";
+    import {
+        getDocument,
+        getDocumentContent,
+        getProfileComments,
+        postComment,
+    } from "../../../../lib/atproto";
+
+    const handle = (window as any).__PROFILE_HANDLE__;
+    const rkey = (window as any).__POST_RKEY__;
+
+    // Simple markdown to HTML converter
+    function markdownToHtml(text: string): string {
+        return text
+            .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+            .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
+            .replace(/\*(.*?)\*/gim, "<em>$1</em>")
+            .replace(
+                /\[([^\]]+)\]\(([^)]+)\)/gim,
+                '<a href="$2" target="_blank" rel="noopener">$1</a>',
+            )
+            .replace(/^- (.*$)/gim, "<li>$1</li>")
+            .replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>")
+            .replace(/\n\n/g, "</p><p>")
+            .replace(/\n/g, "<br>");
+    }
+
+    function escapeHtml(text: string): string {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    async function loadEntry() {
+        const loadingEl = document.getElementById("loading")!;
+        const entryEl = document.getElementById("blog-entry")!;
+        const notFoundEl = document.getElementById("not-found")!;
+        const errorEl = document.getElementById("error")!;
+
+        try {
+            const session = await getSession();
+            let agent: Agent;
+
+            if (session) {
+                agent = new Agent(session);
+            } else {
+                agent = new Agent({ service: "https://public.api.bsky.app" });
+            }
+
+            // Resolve handle to DID
+            const resolved = await agent.resolveHandle({ handle });
+            const did = resolved.data.did;
+
+            // Fetch profile for sidebar
+            const profileResponse = await agent.getProfile({ actor: did });
+            const profile = profileResponse.data;
+
+            // Update sidebar
+            document
+                .getElementById("author-avatar")!
+                .setAttribute("src", profile.avatar || "/default-avatar.svg");
+            document.getElementById("author-name")!.textContent =
+                profile.displayName || handle;
+
+            // Fetch the specific document
+            const doc = await getDocument(agent, did, rkey);
+
+            if (!doc) {
+                loadingEl.style.display = "none";
+                notFoundEl.style.display = "block";
+                return;
+            }
+
+            // Check visibility
+            if (doc.value.visibility === "draft") {
+                // Only show drafts to the author
+                const currentSession = await getSession();
+                const currentDid = currentSession?.did;
+                if (currentDid !== did) {
+                    loadingEl.style.display = "none";
+                    notFoundEl.style.display = "block";
+                    return;
+                }
+            }
+
+            // Populate the entry
+            document.getElementById("entry-title")!.textContent =
+                doc.value.title;
+
+            const publishedDate = new Date(
+                doc.value.publishedAt,
+            ).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+            });
+            const updatedInfo = doc.value.updatedAt
+                ? ` (Updated: ${new Date(doc.value.updatedAt).toLocaleDateString()})`
+                : "";
+            document.getElementById("entry-meta")!.innerHTML = `
+        Posted by <a href="/profile/${handle}">${profile.displayName || handle}</a> on ${publishedDate}${updatedInfo}
+      `;
+
+            // Description
+            if (doc.value.description) {
+                const descEl = document.getElementById("entry-description")!;
+                descEl.textContent = doc.value.description;
+                descEl.style.display = "block";
+            }
+
+            // Tags
+            if (doc.value.tags && doc.value.tags.length > 0) {
+                const tagsEl = document.getElementById("entry-tags")!;
+                tagsEl.innerHTML = doc.value.tags
+                    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+                    .join("");
+                tagsEl.style.display = "block";
+            }
+
+            // Content
+            const content = getDocumentContent(doc.value);
+            document.getElementById("entry-content")!.innerHTML =
+                "<p>" + markdownToHtml(content) + "</p>";
+
+            // Visibility badge
+            const visibilityEl = document.getElementById("entry-visibility")!;
+            if (doc.value.visibility === "draft") {
+                visibilityEl.innerHTML =
+                    '<span class="badge badge-draft">Draft</span>';
+            } else if (doc.value.visibility === "friends") {
+                visibilityEl.innerHTML =
+                    '<span class="badge badge-friends">Friends Only</span>';
+            } else {
+                visibilityEl.innerHTML =
+                    '<span class="badge badge-public">Public</span>';
+            }
+
+            // Update page title
+            document.title = `${doc.value.title} - ${profile.displayName || handle}'s Blog`;
+
+            loadingEl.style.display = "none";
+            entryEl.style.display = "block";
+
+            // Load and display comments
+            await loadComments(agent, did, session);
+        } catch (error) {
+            console.error("Failed to load blog entry:", error);
+            loadingEl.style.display = "none";
+            errorEl.style.display = "block";
+        }
+    }
+
+    async function loadComments(agent: Agent, authorDid: string, session: any) {
+        const commentsSection = document.getElementById("comments-section")!;
+        const commentsList = document.getElementById("comments-list")!;
+        const commentCount = document.getElementById("comment-count")!;
+        const commentFormContainer = document.getElementById(
+            "comment-form-container",
+        )!;
+        const loginToComment = document.getElementById("login-to-comment")!;
+
+        commentsSection.style.display = "block";
+
+        // Show comment form if logged in, otherwise show login prompt
+        if (session) {
+            commentFormContainer.style.display = "block";
+            setupCommentForm(agent, authorDid);
+        } else {
+            loginToComment.style.display = "block";
+        }
+
+        try {
+            const comments = await getProfileComments(agent, authorDid);
+
+            // Filter comments for this specific post (by rkey in target or matching pattern)
+            // For now, show all comments on the author's profile as we don't have post-specific comments yet
+
+            if (comments.length === 0) {
+                commentsList.innerHTML =
+                    '<p class="ms-text-gray ms-text-small">No comments yet. Be the first to comment!</p>';
+                commentCount.textContent = "0 Comments";
+                return;
+            }
+
+            commentCount.textContent = `${comments.length} Comment${comments.length !== 1 ? "s" : ""}`;
+
+            // Get commenter profiles
+            const commenterDids = [...new Set(comments.map((c) => c.author))];
+            const profiles = await Promise.all(
+                commenterDids.map(async (did) => {
+                    try {
+                        const p = await agent.getProfile({ actor: did });
+                        return { did, profile: p.data };
+                    } catch {
+                        return { did, profile: null };
+                    }
+                }),
+            );
+            const profileMap = new Map(profiles.map((p) => [p.did, p.profile]));
+
+            // Sort by newest first
+            comments.sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime(),
+            );
+
+            commentsList.innerHTML = comments
+                .map((comment) => {
+                    const profile = profileMap.get(comment.author);
+                    const authorName =
+                        profile?.displayName || profile?.handle || "Unknown";
+                    const authorHandle = profile?.handle || "";
+                    const avatar = profile?.avatar || "/default-avatar.svg";
+
+                    return `
+                    <div class="comment-item">
+                        <div class="comment-author">
+                            <img src="${avatar}" alt="${authorName}" class="comment-avatar" />
+                            <div class="comment-author-info">
+                                <a href="/profile/${authorHandle}" class="comment-author-name">${escapeHtml(authorName)}</a>
+                                <span class="comment-time">${new Date(comment.createdAt).toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div class="comment-content">${escapeHtml(comment.content).replace(/\n/g, "<br>")}</div>
+                    </div>
+                `;
+                })
+                .join("");
+        } catch (error) {
+            console.error("Failed to load comments:", error);
+            commentsList.innerHTML =
+                '<p class="ms-text-gray ms-text-small">Could not load comments.</p>';
+        }
+    }
+
+    function setupCommentForm(agent: Agent, authorDid: string) {
+        const form = document.getElementById("comment-form") as HTMLFormElement;
+        const submitBtn = document.getElementById(
+            "comment-submit",
+        ) as HTMLButtonElement;
+        const textarea = document.getElementById(
+            "comment-text",
+        ) as HTMLTextAreaElement;
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const content = textarea.value.trim();
+            if (!content) return;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Posting...";
+
+            try {
+                await postComment(agent, authorDid, content);
+                textarea.value = "";
+
+                // Reload comments
+                const session = await getSession();
+                await loadComments(agent, authorDid, session);
+
+                submitBtn.textContent = "Posted!";
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Post Comment";
+                }, 1500);
+            } catch (error) {
+                console.error("Failed to post comment:", error);
+                alert("Failed to post comment. Please try again.");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Post Comment";
+            }
+        });
+    }
+
+    loadEntry();
+</script>
+
+<style>
+    .blog-layout {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 15px;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .blog-sidebar {
+        min-width: 0;
+    }
+
+    .blog-main {
+        min-width: 0;
+    }
+
+    .author-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 4px;
+        object-fit: cover;
+        border: 2px solid var(--ms-navy);
+    }
+
+    .author-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        margin: 10px 0 2px;
+    }
+
+    .author-handle {
+        font-size: 11px;
+        color: #666;
+        margin: 0 0 10px;
+    }
+
+    .view-profile-link {
+        font-size: 11px;
+        color: var(--ms-orange);
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .loading-state p {
+        font-size: 12px;
+        color: #666;
+        margin-top: 15px;
+    }
+
+    .ms-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid var(--ms-blue-light);
+        border-top-color: var(--ms-navy);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .entry-title {
+        font-size: 24px;
+        color: var(--ms-navy);
+        margin: 0 0 10px;
+        line-height: 1.3;
+    }
+
+    .entry-meta {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .entry-meta a {
+        color: var(--ms-link);
+    }
+
+    .entry-description {
+        font-size: 14px;
+        font-style: italic;
+        color: #555;
+        background: #f9f9f9;
+        padding: 15px;
+        border-left: 3px solid var(--ms-orange);
+        margin-bottom: 20px;
+    }
+
+    .entry-tags {
+        margin-bottom: 20px;
+    }
+
+    .entry-tags .tag {
+        display: inline-block;
+        padding: 3px 10px;
+        background: var(--ms-blue-light);
+        color: var(--ms-navy);
+        font-size: 11px;
+        border-radius: 12px;
+        margin-right: 8px;
+        margin-bottom: 5px;
+    }
+
+    .entry-content {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #333;
+    }
+
+    .entry-content p {
+        margin: 0 0 16px;
+    }
+
+    .entry-content h1,
+    .entry-content h2,
+    .entry-content h3 {
+        color: var(--ms-navy);
+        margin: 24px 0 12px;
+    }
+
+    .entry-content h1 {
+        font-size: 20px;
+    }
+    .entry-content h2 {
+        font-size: 18px;
+    }
+    .entry-content h3 {
+        font-size: 16px;
+    }
+
+    .entry-content ul {
+        margin: 0 0 16px 20px;
+    }
+
+    .entry-content a {
+        color: var(--ms-link);
+    }
+
+    .entry-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+        font-size: 12px;
+        color: #666;
+    }
+
+    .badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .badge-public {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-friends {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-draft {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .error-state {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .error-state h3 {
+        color: var(--ms-navy);
+        margin-bottom: 10px;
+    }
+
+    .error-state p {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .ms-button {
+        display: inline-block;
+        padding: 8px 20px;
+        background: var(--ms-orange);
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 12px;
+        border: 1px solid #d45500;
+    }
+
+    /* Comments Section */
+    .comments-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid var(--ms-navy);
+    }
+
+    .comments-header {
+        font-size: 16px;
+        color: var(--ms-navy);
+        margin: 0 0 20px;
+    }
+
+    .comment-form-container {
+        margin-bottom: 25px;
+    }
+
+    .comment-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .comment-textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .comment-textarea:focus {
+        outline: none;
+        border-color: var(--ms-navy);
+    }
+
+    .comment-submit {
+        align-self: flex-end;
+        padding: 8px 20px;
+        background: var(--ms-orange);
+        color: white;
+        border: 1px solid #d45500;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .comment-submit:hover {
+        background: #d45500;
+    }
+
+    .comment-submit:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .login-prompt {
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 12px;
+        margin-bottom: 20px;
+    }
+
+    .login-prompt a {
+        color: var(--ms-link);
+    }
+
+    .comments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .comment-item {
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border-left: 3px solid var(--ms-blue-light);
+    }
+
+    .comment-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .comment-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        object-fit: cover;
+    }
+
+    .comment-author-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .comment-author-name {
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--ms-navy);
+        text-decoration: none;
+    }
+
+    .comment-author-name:hover {
+        color: var(--ms-link);
+    }
+
+    .comment-time {
+        font-size: 10px;
+        color: #999;
+    }
+
+    .comment-content {
+        font-size: 12px;
+        line-height: 1.6;
+        color: #333;
+    }
+
+    @media (max-width: 768px) {
+        .blog-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .blog-sidebar {
+            display: none;
+        }
+
+        .entry-title {
+            font-size: 20px;
+        }
+    }
+</style>

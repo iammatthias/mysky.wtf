@@ -160,7 +160,7 @@ if (!user) {
         // Load current top friends
         currentTopFriends = await getTopFriends(agent, session.did);
         await renderTopFriends();
-        await loadFollowers();
+        await loadFollowers(session.did);
     }
 
     async function renderTopFriends() {
@@ -205,10 +205,10 @@ if (!user) {
         });
     }
 
-    async function loadFollowers() {
+    async function loadFollowers(userDid: string) {
         try {
             const response = await agent.getFollowers({
-                actor: agent.session!.did,
+                actor: userDid,
                 limit: 50,
             });
             const followers = response.data.followers;

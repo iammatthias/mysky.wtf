@@ -91,13 +91,20 @@ if (!user) {
     <Footer />
 </Layout>
 
+<script define:vars={{ userHandle: user.handle }}>
+    window.__USER_HANDLE__ = userHandle;
+</script>
+
 <script>
     import { Agent } from "@atproto/api";
     import { getSession } from "../../lib/auth";
+
+    const userHandle = (window as any).__USER_HANDLE__;
     import {
         getDocuments,
         deleteDocument,
         getRkeyFromUri,
+        getDocumentContent,
     } from "../../lib/atproto";
 
     // Simple markdown to HTML for display
@@ -158,8 +165,7 @@ if (!user) {
             blogList.innerHTML = published
                 .map((doc) => {
                     const rkey = getRkeyFromUri(doc.uri);
-                    const content =
-                        doc.value.content?.value || doc.value.textContent || "";
+                    const content = getDocumentContent(doc.value);
                     const tags =
                         doc.value.tags
                             ?.map((t) => `<span class="tag">${t}</span>`)
@@ -172,7 +178,7 @@ if (!user) {
                     return `
           <div class="ms-blog-entry" data-rkey="${rkey}">
             <h3 class="ms-blog-title">
-              <a href="/blog/entry/${rkey}">${doc.value.title}</a>
+              <a href="/profile/${userHandle}/blog/${rkey}">${doc.value.title}</a>
               ${visibility}
             </h3>
             ${doc.value.description ? `<p class="ms-blog-description">${doc.value.description}</p>` : ""}
